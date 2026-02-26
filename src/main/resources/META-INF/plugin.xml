@@ -1,0 +1,20 @@
+<idea-plugin>
+    <id>com.alextdev.MermaidVisualizer</id>
+    <name>MermaidVisualizer</name>
+    <vendor url="https://github.com/Alex9583">alextdev</vendor>
+
+    <description><![CDATA[
+        Renders Mermaid diagrams in the Markdown preview using the official Mermaid.js library (v11.12.x).
+        Supports all 22+ diagram types: flowchart, sequence, class, ER, gantt, pie, state, and more.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.intellij.plugins.markdown</depends>
+
+    <resource-bundle>messages.MyMessageBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="org.intellij.markdown">
+        <browserPreviewExtensionProvider
+            implementation="com.alextdev.mermaidvisualizer.markdown.MermaidBrowserExtension$Provider"/>
+    </extensions>
+</idea-plugin>
