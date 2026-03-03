@@ -1,0 +1,54 @@
+name: Check Mermaid.js Update
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for Mermaid.js update
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST=$(curl -sf https://registry.npmjs.org/mermaid/latest | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+          if [ -z "$LATEST" ]; then
+            echo "::error::Failed to fetch latest Mermaid version from npm registry"
+            exit 1
+          fi
+
+          if ! echo "$LATEST" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "::error::Unexpected version format: '$LATEST'"
+            exit 1
+          fi
+
+          CURRENT=$(cat src/main/resources/web/mermaid.version 2>/dev/null || echo "unknown")
+
+          echo "Latest npm version: $LATEST"
+          echo "Bundled version: $CURRENT"
+
+          if [ "$LATEST" = "$CURRENT" ]; then
+            echo "Already up to date."
+            exit 0
+          fi
+
+          EXISTING=$(gh issue list --search "Mermaid.js $LATEST" --state open --json number --jq length)
+          if [ "$EXISTING" != "0" ]; then
+            echo "Issue already exists for v$LATEST"
+            exit 0
+          fi
+
+          gh issue create \
+            --title "Update Mermaid.js to v$LATEST" \
+            --body "A new version of Mermaid.js is available.
+
+          - **Current bundled version:** $CURRENT
+          - **Latest npm version:** $LATEST
+          - **Changelog:** https://github.com/mermaid-js/mermaid/releases/tag/v$LATEST
+
+          Run \`./gradlew updateMermaid\` to update, then test with all diagram types." \
+            --label "dependencies"
