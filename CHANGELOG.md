@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.1.0] - 2026-03-03
+
+- Add write permissions to auto-release workflow (#2)
+
 ## [1.0.0] - 2026-03-02
 
 ### Added
