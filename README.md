@@ -17,7 +17,7 @@ IntelliJ plugin that renders [Mermaid](https://mermaid.js.org/) diagrams directl
 
 ## Installation
 
-Install from the [JetBrains Marketplace](https://plugins.jetbrains.com/) (search for "Mermaid Visualizer" (soon)), or build from source.
+Install from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/30432-mermaid-visualizer) (or search for "Mermaid Visualizer"), or build from source.
 
 ## Development
 
