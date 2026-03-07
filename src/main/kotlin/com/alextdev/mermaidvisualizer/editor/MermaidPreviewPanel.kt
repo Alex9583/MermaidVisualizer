@@ -6,6 +6,8 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
+import com.intellij.ui.jcef.JBCefBrowserBase
+import com.intellij.ui.jcef.JBCefJSQuery
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandler
@@ -23,11 +25,26 @@ internal class MermaidPreviewPanel(parentDisposable: Disposable) {
     private val browser: JBCefBrowser = JBCefBrowser()
     private var pageLoaded = false
     private var pendingRender: (() -> Unit)? = null
+    private val scrollQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    private var scrollCallback: ((Double) -> Unit)? = null
 
     val component: JComponent get() = browser.component
 
     init {
         Disposer.register(parentDisposable, browser)
+        Disposer.register(parentDisposable, scrollQuery)
+
+        scrollQuery.addHandler { fractionStr ->
+            val fraction = fractionStr.toDoubleOrNull()
+            if (fraction != null) {
+                ApplicationManager.getApplication().invokeLater {
+                    scrollCallback?.invoke(fraction)
+                }
+            } else {
+                LOG.warn("Received unparseable scroll fraction from JS bridge: '$fractionStr'")
+            }
+            null
+        }
 
         browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
             override fun onLoadEnd(cefBrowser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
@@ -38,6 +55,7 @@ internal class MermaidPreviewPanel(parentDisposable: Disposable) {
                     ApplicationManager.getApplication().invokeLater {
                         if (browser.isDisposed) return@invokeLater
                         pageLoaded = true
+                        injectScrollBridge()
                         pendingRender?.invoke()
                         pendingRender = null
                     }
@@ -51,10 +69,9 @@ internal class MermaidPreviewPanel(parentDisposable: Disposable) {
                 errorText: String?,
                 failedUrl: String?,
             ) {
-                LOG.error("JCEF page load failed: errorCode=$errorCode, errorText=$errorText, url=$failedUrl")
+                LOG.warn("JCEF page load failed: errorCode=$errorCode, errorText=$errorText, url=$failedUrl")
                 ApplicationManager.getApplication().invokeLater {
                     if (browser.isDisposed) return@invokeLater
-                    pageLoaded = true
                     pendingRender = null
                 }
             }
@@ -64,25 +81,45 @@ internal class MermaidPreviewPanel(parentDisposable: Disposable) {
     }
 
     fun render(source: String, isDark: Boolean, forceThemeRefresh: Boolean = false) {
+        if (browser.isDisposed) return
         val encoded = BASE64_ENCODER.encodeToString(source.toByteArray(Charsets.UTF_8))
         val themeClass = if (isDark) "dark-theme" else ""
         val js = """
-            try {
-                document.body.className='$themeClass';
-                window.renderDiagram('$encoded',$forceThemeRefresh);
-            } catch(e) {
+            document.body.className='$themeClass';
+            window.renderDiagram('$encoded',$forceThemeRefresh).catch(function(e) {
                 console.error('[MermaidVisualizer] renderDiagram failed: ' + e.message);
                 var c = document.getElementById('mermaid-container');
-                if (c) c.textContent = 'Render error: ' + e.message;
-            }
+                if (c) window.__showError(c, 'Render error: ' + e.message, null, document.body.classList.contains('dark-theme'));
+            });
         """.trimIndent()
 
+        val execute = { browser.cefBrowser.executeJavaScript(js, "mermaid-preview", 0) }
         if (pageLoaded) {
-            browser.cefBrowser.executeJavaScript(js, "mermaid-preview", 0)
+            execute()
         } else {
-            // Only keep the latest pending render
-            pendingRender = { browser.cefBrowser.executeJavaScript(js, "mermaid-preview", 0) }
+            pendingRender = execute
         }
+    }
+
+    fun setScrollCallback(callback: (Double) -> Unit) {
+        scrollCallback = callback
+    }
+
+    fun scrollToFraction(fraction: Double) {
+        if (!pageLoaded || browser.isDisposed) return
+        val clamped = fraction.coerceIn(0.0, 1.0)
+        browser.cefBrowser.executeJavaScript(
+            "window.__scrollPreviewTo($clamped);",
+            "mermaid-scroll",
+            0,
+        )
+    }
+
+    private fun injectScrollBridge() {
+        if (browser.isDisposed) return
+        val injection = scrollQuery.inject("fraction")
+        val js = "window.__mermaidScrollBridge = function(fraction) { $injection };"
+        browser.cefBrowser.executeJavaScript(js, "mermaid-scroll-bridge", 0)
     }
 
     companion object {

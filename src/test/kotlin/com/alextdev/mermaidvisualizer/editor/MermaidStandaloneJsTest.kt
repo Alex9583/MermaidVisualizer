@@ -65,4 +65,27 @@ class MermaidStandaloneJsTest {
         assertTrue(jsContent.contains("showError"), "Should have error display function")
         assertTrue(jsContent.contains("mermaid-error"), "Should have error CSS class")
     }
+
+    @Test
+    fun `standalone js exposes scroll sync public contract`() {
+        assertTrue(jsContent.contains("window.__scrollPreviewTo"), "Should expose __scrollPreviewTo for Kotlin->JS scroll sync")
+        assertTrue(jsContent.contains("__mermaidScrollBridge"), "Should reference __mermaidScrollBridge for JS->Kotlin scroll sync")
+    }
+
+    @Test
+    fun `standalone js scroll sync has defensive guards`() {
+        assertTrue(jsContent.contains("scrollGuardActive"), "Should have scroll guard to prevent feedback loops")
+        assertTrue(jsContent.contains("isFinite"), "Should validate fraction parameter")
+        assertTrue(jsContent.contains("passive"), "Should use passive scroll listener")
+    }
+
+    @Test
+    fun `standalone js has error handling for mermaid initialization`() {
+        assertTrue(jsContent.contains("mermaid.initialize failed"), "Should catch and report mermaid.initialize errors")
+    }
+
+    @Test
+    fun `standalone js exposes showError on window`() {
+        assertTrue(jsContent.contains("window.__showError"), "Should expose __showError for Kotlin-side fallback error display")
+    }
 }

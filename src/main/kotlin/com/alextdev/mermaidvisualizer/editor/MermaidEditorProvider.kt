@@ -25,6 +25,7 @@ internal class MermaidEditorProvider : FileEditorProvider, DumbAware {
         val textEditor = editor as? TextEditor
             ?: error("TextEditorProvider returned ${editor::class.java.name} instead of TextEditor")
         val previewEditor = MermaidPreviewFileEditor(project, file)
+        previewEditor.attachEditor(textEditor.editor)
         return TextEditorWithPreview(
             textEditor,
             previewEditor,

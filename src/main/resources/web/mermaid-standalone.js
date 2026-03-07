@@ -52,12 +52,18 @@
 
     function initMermaid(theme) {
         currentTheme = theme;
-        mermaid.initialize({
-            startOnLoad: false,
-            maxTextSize: 100000,
-            theme: currentTheme,
-            securityLevel: 'strict'
-        });
+        try {
+            mermaid.initialize({
+                startOnLoad: false,
+                maxTextSize: 100000,
+                theme: currentTheme,
+                securityLevel: 'strict'
+            });
+        } catch (e) {
+            console.error('[MermaidVisualizer] mermaid.initialize failed:', e);
+            var container = document.getElementById('mermaid-container');
+            if (container) showError(container, 'Failed to initialize Mermaid: ' + e.message, null, theme === 'dark');
+        }
     }
 
     window.renderDiagram = async function (base64Source, forceThemeRefresh) {
@@ -102,5 +108,48 @@
         }
     };
 
+    // Expose showError for Kotlin-side fallback error display
+    window.__showError = showError;
+
     initMermaid('default');
+
+    // --- Scroll synchronization ---
+    const SCROLL_GUARD_RESET_MS = 100;
+    let scrollGuardActive = false;
+
+    function getScrollableHeight() {
+        return document.documentElement.scrollHeight - window.innerHeight;
+    }
+
+    // Called from Kotlin to scroll preview to a proportional position
+    window.__scrollPreviewTo = function (fraction) {
+        if (typeof fraction !== 'number' || !isFinite(fraction)) return;
+        const scrollableHeight = getScrollableHeight();
+        if (scrollableHeight <= 0) return;
+        scrollGuardActive = true;
+        window.scrollTo(0, fraction * scrollableHeight);
+        requestAnimationFrame(function () {
+            setTimeout(function () { scrollGuardActive = false; }, SCROLL_GUARD_RESET_MS);
+        });
+    };
+
+    // Throttled scroll listener — reports position to Kotlin via JBCefJSQuery bridge
+    let scrollRAF = null;
+    window.addEventListener('scroll', function () {
+        if (scrollGuardActive || scrollRAF) return;
+        scrollRAF = requestAnimationFrame(function () {
+            scrollRAF = null;
+            if (scrollGuardActive) return;
+            const scrollableHeight = getScrollableHeight();
+            if (scrollableHeight <= 0) return;
+            const fraction = window.scrollY / scrollableHeight;
+            if (typeof window.__mermaidScrollBridge === 'function') {
+                try {
+                    window.__mermaidScrollBridge(String(fraction));
+                } catch (e) {
+                    console.error('[MermaidVisualizer] scroll bridge call failed:', e);
+                }
+            }
+        });
+    }, { passive: true });
 })();
