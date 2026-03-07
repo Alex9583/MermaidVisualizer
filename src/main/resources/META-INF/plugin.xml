@@ -9,6 +9,7 @@
         <h2>Features</h2>
         <ul>
             <li>Live rendering of <code>```mermaid</code> code blocks in the Markdown preview</li>
+            <li>Dedicated split editor with live preview for <code>.mmd</code> and <code>.mermaid</code> files</li>
             <li>Automatic dark/light theme matching with your IDE</li>
             <li>Fully offline — Mermaid.js is bundled, no internet required</li>
             <li>Works in all JetBrains IDEs with Markdown support</li>
@@ -33,6 +34,8 @@
             fieldName="INSTANCE"
             language="Mermaid"
             extensions="mmd;mermaid"/>
+        <fileEditorProvider
+            implementation="com.alextdev.mermaidvisualizer.editor.MermaidEditorProvider"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.intellij.markdown">
