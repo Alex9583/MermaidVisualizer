@@ -94,6 +94,7 @@ internal class MermaidPreviewPanel(parentDisposable: Disposable) {
         """.trimIndent()
 
         val execute = { browser.cefBrowser.executeJavaScript(js, "mermaid-preview", 0) }
+
         if (pageLoaded) {
             execute()
         } else {

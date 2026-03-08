@@ -36,6 +36,14 @@
             extensions="mmd;mermaid"/>
         <fileEditorProvider
             implementation="com.alextdev.mermaidvisualizer.editor.MermaidEditorProvider"/>
+        <lang.parserDefinition
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidParserDefinition"/>
+        <lang.syntaxHighlighterFactory
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidSyntaxHighlighterFactory"/>
+        <colorSettingsPage
+            implementation="com.alextdev.mermaidvisualizer.lang.MermaidColorSettingsPage"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.intellij.markdown">

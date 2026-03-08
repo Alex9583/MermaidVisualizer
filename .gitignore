@@ -36,6 +36,9 @@ bin/
 ### VS Code ###
 .vscode/
 
+### Generated sources ###
+src/main/gen/
+
 ### Mac OS ###
 .DS_Store
 

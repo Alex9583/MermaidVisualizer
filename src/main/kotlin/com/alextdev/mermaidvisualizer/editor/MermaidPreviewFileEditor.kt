@@ -1,6 +1,7 @@
 package com.alextdev.mermaidvisualizer.editor
 
 import com.alextdev.mermaidvisualizer.MyMessageBundle
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
@@ -69,7 +70,7 @@ internal class MermaidPreviewFileEditor(
             }
         }, this)
 
-        project.messageBus.connect(this).subscribe(LafManagerListener.TOPIC, LafManagerListener {
+        ApplicationManager.getApplication().messageBus.connect(this).subscribe(LafManagerListener.TOPIC, LafManagerListener {
             scheduleUpdate(forceThemeRefresh = true)
         })
 

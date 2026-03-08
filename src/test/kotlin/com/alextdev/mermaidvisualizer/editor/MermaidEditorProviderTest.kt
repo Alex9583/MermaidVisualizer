@@ -8,7 +8,7 @@ class MermaidEditorProviderTest : BasePlatformTestCase() {
 
     override fun getTestDataPath(): String = "src/test/resources/testData"
 
-    private val provider = MermaidEditorProvider()
+    private val provider by lazy { MermaidEditorProvider() }
 
     fun testAcceptsMmdFile() {
         val file = myFixture.configureByFile("simple.mmd")
