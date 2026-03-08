@@ -1,0 +1,105 @@
+flowchart TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[OK]
+    B -->|No| D[Cancel]
+    C --> E[End]
+    D --> E
+
+    E --> F{Another Decision}
+    F -->|Option 1| G[Process A]
+    F -->|Option 2| H[Process B]
+    F -->|Option 3| I[Process C]
+    G --> J[Merge Point]
+    H --> J
+    I --> J
+
+    J --> K{Validation}
+    K -->|Valid| L[Save to Database]
+    K -->|Invalid| M[Show Error]
+    M --> F
+    L --> N[Send Notification]
+    N --> O[Log Result]
+    O --> P{Continue?}
+    P -->|Yes| Q[Next Step]
+    P -->|No| R[Finish]
+
+    Q --> S[Load Data]
+    S --> T{Data Type}
+    T -->|JSON| U[Parse JSON]
+    T -->|XML| V[Parse XML]
+    T -->|CSV| W[Parse CSV]
+    U --> X[Validate Schema]
+    V --> X
+    W --> X
+
+    X --> Y{Schema Valid?}
+    Y -->|Yes| Z[Transform Data]
+    Y -->|No| AA[Report Error]
+    AA --> AB[Retry?]
+    AB -->|Yes| S
+    AB -->|No| R
+
+    Z --> AC[Apply Business Rules]
+    AC --> AD{Rules Passed?}
+    AD -->|Yes| AE[Generate Output]
+    AD -->|No| AF[Flag for Review]
+    AF --> AG[Notify Reviewer]
+    AG --> AH{Approved?}
+    AH -->|Yes| AE
+    AH -->|No| AI[Reject]
+    AI --> R
+
+    AE --> AJ[Format Report]
+    AJ --> AK{Output Format}
+    AK -->|PDF| AL[Generate PDF]
+    AK -->|HTML| AM[Generate HTML]
+    AK -->|Email| AN[Compose Email]
+    AL --> AO[Store Report]
+    AM --> AO
+    AN --> AP[Send Email]
+    AP --> AO
+
+    AO --> AQ[Update Dashboard]
+    AQ --> AR{More Tasks?}
+    AR -->|Yes| AS[Fetch Next Task]
+    AS --> AT[Initialize Context]
+    AT --> AU[Load Dependencies]
+    AU --> AV{Dependencies OK?}
+    AV -->|Yes| AW[Execute Task]
+    AV -->|No| AX[Install Missing]
+    AX --> AU
+
+    AW --> AY{Task Result}
+    AY -->|Success| AZ[Record Success]
+    AY -->|Failure| BA[Record Failure]
+    AY -->|Timeout| BB[Retry Task]
+    BB --> AW
+    AZ --> AR
+    BA --> BC{Critical?}
+    BC -->|Yes| BD[Alert Team]
+    BD --> BE[Create Incident]
+    BE --> R
+    BC -->|No| AR
+
+    AR -->|No| BF[Generate Summary]
+    BF --> BG[Calculate Metrics]
+    BG --> BH[Success Rate]
+    BG --> BI[Avg Duration]
+    BG --> BJ[Error Count]
+    BH --> BK[Final Report]
+    BI --> BK
+    BJ --> BK
+
+    BK --> BL{Archive?}
+    BL -->|Yes| BM[Archive to S3]
+    BL -->|No| BN[Keep in DB]
+    BM --> BO[Cleanup Temp Files]
+    BN --> BO
+
+    BO --> BP[Release Resources]
+    BP --> BQ[Close Connections]
+    BQ --> BR[Shutdown Gracefully]
+    BR --> R
+
+    R --> BS[Final Cleanup]
+    BS --> BT[Exit]

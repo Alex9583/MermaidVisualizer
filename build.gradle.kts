@@ -3,6 +3,7 @@ import java.net.URI
 plugins {
     id("org.jetbrains.kotlin.jvm") version "2.1.20"
     id("org.jetbrains.intellij.platform") version "2.10.2"
+    id("org.jetbrains.grammarkit") version "2022.3.2.2"
 }
 
 group = "com.alextdev"
@@ -49,6 +50,12 @@ intellijPlatform {
     }
 }
 
+sourceSets {
+    main {
+        java.srcDirs("src/main/gen")
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
@@ -57,6 +64,20 @@ kotlin {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.register<org.jetbrains.grammarkit.tasks.GenerateLexerTask>("generateMermaidLexer") {
+    sourceFile.set(file("src/main/grammars/Mermaid.flex"))
+    targetOutputDir.set(file("src/main/gen/com/alextdev/mermaidvisualizer/lang"))
+    purgeOldFiles.set(true)
+}
+
+tasks.named("compileKotlin") {
+    dependsOn("generateMermaidLexer")
+}
+
+tasks.named("compileJava") {
+    dependsOn("generateMermaidLexer")
 }
 
 tasks.register("updateMermaid") {

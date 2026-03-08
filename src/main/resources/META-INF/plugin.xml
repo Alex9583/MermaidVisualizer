@@ -4,15 +4,47 @@
     <vendor url="https://github.com/Alex9583">alextdev</vendor>
 
     <description><![CDATA[
-        Renders Mermaid diagrams in the Markdown preview using the official Mermaid.js library (v11.12.x).
+        <p>Renders <a href="https://mermaid.js.org/">Mermaid</a> diagrams directly in the Markdown preview using the official Mermaid.js library (v11.12.x).</p>
 
-        Supports all 22+ diagram types: flowchart, sequence, class, ER, gantt, pie, state, and more.
+        <h2>Features</h2>
+        <ul>
+            <li>Live rendering of <code>```mermaid</code> code blocks in the Markdown preview</li>
+            <li>Dedicated split editor with live preview for <code>.mmd</code> and <code>.mermaid</code> files</li>
+            <li>Automatic dark/light theme matching with your IDE</li>
+            <li>Fully offline — Mermaid.js is bundled, no internet required</li>
+            <li>Works in all JetBrains IDEs with Markdown support</li>
+        </ul>
+
+        <h2>Supported Diagrams</h2>
+        <p>All 22+ Mermaid diagram types: flowchart, sequence, class, state, ER, gantt, pie, git graph, mindmap, timeline, sankey, and more.</p>
+
+        <h2>Usage</h2>
+        <p>Simply write a <code>```mermaid</code> fenced code block in any Markdown file and open the preview.</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>org.intellij.plugins.markdown</depends>
 
     <resource-bundle>messages.MyMessageBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType
+            name="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidFileType"
+            fieldName="INSTANCE"
+            language="Mermaid"
+            extensions="mmd;mermaid"/>
+        <fileEditorProvider
+            implementation="com.alextdev.mermaidvisualizer.editor.MermaidEditorProvider"/>
+        <lang.parserDefinition
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidParserDefinition"/>
+        <lang.syntaxHighlighterFactory
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidSyntaxHighlighterFactory"/>
+        <colorSettingsPage
+            implementation="com.alextdev.mermaidvisualizer.lang.MermaidColorSettingsPage"/>
+    </extensions>
 
     <extensions defaultExtensionNs="org.intellij.markdown">
         <browserPreviewExtensionProvider
