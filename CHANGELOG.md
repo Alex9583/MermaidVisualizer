@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.2.0] - 2026-03-08
+
+- Add dedicated .mmd/.mermaid file support with split editor, live preview, and syntax highlighting (#4)
+
 ## [1.1.0] - 2026-03-03
 
 - Add write permissions to auto-release workflow (#2)
