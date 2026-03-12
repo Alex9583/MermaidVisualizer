@@ -20,11 +20,12 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
         }
     }
 
-    fun testScriptsContainsTwoUrls() {
+    fun testScriptsContainsThreeUrls() {
         val scripts = extension.scripts
-        assertEquals(2, scripts.size)
+        assertEquals(3, scripts.size)
         assertTrue("First script URL should end with mermaid.min.js", scripts[0].endsWith("mermaid.min.js"))
-        assertTrue("Second script URL should end with mermaid-render.js", scripts[1].endsWith("mermaid-render.js"))
+        assertTrue("Second script URL should end with mermaid-shadow-css-init.js", scripts[1].endsWith("mermaid-shadow-css-init.js"))
+        assertTrue("Third script URL should end with mermaid-render.js", scripts[2].endsWith("mermaid-render.js"))
     }
 
     fun testStylesContainsOneUrl() {
@@ -41,6 +42,8 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid.min.js"))
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-render.js"))
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-preview.css"))
+        assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-shadow.css"))
+        assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-shadow-css-init.js"))
     }
 
     fun testCanProvideReturnsFalseForUnknownResources() {
@@ -58,6 +61,12 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
 
         val cssResource = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid-preview.css")
         assertNotNull("mermaid-preview.css should be loadable", cssResource)
+
+        val shadowCssResource = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid-shadow.css")
+        assertNotNull("mermaid-shadow.css should be loadable", shadowCssResource)
+
+        val initResource = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid-shadow-css-init.js")
+        assertNotNull("mermaid-shadow-css-init.js should be loadable", initResource)
     }
 
     fun testLoadResourceReturnsNullForUnknownFiles() {
@@ -119,5 +128,15 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
     fun testProviderCreatesValidInstance() {
         val provider = MermaidBrowserExtension.Provider()
         assertNotNull(provider)
+    }
+
+    fun testExtensionAcceptsNullExportHandler() {
+        val ext = MermaidBrowserExtension(null)
+        try {
+            assertNotNull(ext)
+            assertTrue("Extension should provide scripts even without export handler", ext.scripts.isNotEmpty())
+        } finally {
+            ext.dispose()
+        }
     }
 }

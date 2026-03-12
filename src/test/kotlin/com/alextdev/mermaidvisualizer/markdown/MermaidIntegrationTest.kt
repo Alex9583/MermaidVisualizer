@@ -58,10 +58,11 @@ class MermaidIntegrationTest : BasePlatformTestCase() {
         val extension = MermaidBrowserExtension()
         try {
             val scripts = extension.scripts
-            assertEquals("Should have exactly 2 scripts", 2, scripts.size)
+            assertEquals("Should have exactly 3 scripts", 3, scripts.size)
 
             val first = scripts[0].substringAfterLast('/')
             val second = scripts[1].substringAfterLast('/')
+            val third = scripts[2].substringAfterLast('/')
 
             assertEquals(
                 "mermaid.min.js must be loaded first (library before bootstrap)",
@@ -69,9 +70,14 @@ class MermaidIntegrationTest : BasePlatformTestCase() {
                 first
             )
             assertEquals(
-                "mermaid-render.js must be loaded second (bootstrap after library)",
-                "mermaid-render.js",
+                "mermaid-shadow-css-init.js must be loaded second (shadow CSS before render)",
+                "mermaid-shadow-css-init.js",
                 second
+            )
+            assertEquals(
+                "mermaid-render.js must be loaded third (bootstrap after library and CSS)",
+                "mermaid-render.js",
+                third
             )
         } finally {
             extension.dispose()

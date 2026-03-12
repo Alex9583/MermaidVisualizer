@@ -54,7 +54,7 @@ internal class MermaidPreviewFileEditor(
         }
 
         if (MermaidPreviewPanel.isAvailable()) {
-            panel = MermaidPreviewPanel(this)
+            panel = MermaidPreviewPanel(project, this)
             mainComponent = panel.component
         } else {
             panel = null

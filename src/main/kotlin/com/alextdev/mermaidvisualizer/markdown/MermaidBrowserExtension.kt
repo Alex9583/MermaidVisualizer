@@ -10,12 +10,19 @@ import org.intellij.plugins.markdown.ui.preview.ResourceProvider
 
 private val LOG = Logger.getInstance("MermaidVisualizer")
 
-private val RESOURCE_NAMES = setOf("mermaid.min.js", "mermaid-render.js", "mermaid-preview.css")
+private const val SHADOW_CSS_INIT_SCRIPT = "mermaid-shadow-css-init.js"
+
+private val RESOURCE_NAMES = setOf(
+    "mermaid.min.js", "mermaid-render.js", "mermaid-preview.css",
+    "mermaid-shadow.css", SHADOW_CSS_INIT_SCRIPT,
+)
 
 private val resourceCache = mutableMapOf<String, ResourceProvider.Resource>()
 private val failedResources = mutableSetOf<String>()
 
-internal class MermaidBrowserExtension : MarkdownBrowserPreviewExtension, ResourceProvider {
+internal class MermaidBrowserExtension(
+    private val exportHandler: MermaidMarkdownExportHandler? = null,
+) : MarkdownBrowserPreviewExtension, ResourceProvider {
 
     private var serverRegistration: Disposable? = null
 
@@ -38,6 +45,7 @@ internal class MermaidBrowserExtension : MarkdownBrowserPreviewExtension, Resour
         get() = try {
             listOf(
                 PreviewStaticServer.getStaticUrl(this, "mermaid.min.js"),
+                PreviewStaticServer.getStaticUrl(this, SHADOW_CSS_INIT_SCRIPT),
                 PreviewStaticServer.getStaticUrl(this, "mermaid-render.js"),
             )
         } catch (e: Exception) {
@@ -73,9 +81,9 @@ internal class MermaidBrowserExtension : MarkdownBrowserPreviewExtension, Resour
             if (resolved in failedResources) return null
             resourceCache[resolved] ?: run {
                 try {
-                    val bytes = javaClass.classLoader.getResourceAsStream("web/$resolved")?.use { it.readBytes() }
+                    val bytes = loadResourceBytes(resolved)
                     if (bytes == null) {
-                        LOG.error("Resource not found: web/$resolved — plugin installation may be corrupted")
+                        LOG.error("Resource not found: $resolved — plugin installation may be corrupted")
                         failedResources.add(resolved)
                         return null
                     }
@@ -86,7 +94,7 @@ internal class MermaidBrowserExtension : MarkdownBrowserPreviewExtension, Resour
                     }
                     ResourceProvider.Resource(bytes, mimeType).also { resourceCache[resolved] = it }
                 } catch (e: Exception) {
-                    LOG.error("Failed to load resource: web/$resolved", e)
+                    LOG.error("Failed to load resource: $resolved", e)
                     failedResources.add(resolved)
                     return null
                 }
@@ -94,14 +102,47 @@ internal class MermaidBrowserExtension : MarkdownBrowserPreviewExtension, Resour
         }
     }
 
+    private fun loadResourceBytes(name: String): ByteArray? {
+        if (name == SHADOW_CSS_INIT_SCRIPT) {
+            return buildShadowCssInitScript()
+        }
+        return javaClass.classLoader.getResourceAsStream("web/$name")?.use { it.readBytes() }
+    }
+
+    private fun buildShadowCssInitScript(): ByteArray? {
+        val cssBytes = javaClass.classLoader.getResourceAsStream("web/mermaid-shadow.css")
+            ?.use { it.readBytes() } ?: return null
+        val cssText = cssBytes.toString(Charsets.UTF_8)
+            .replace("\\", "\\\\")
+            .replace("`", "\\`")
+            .replace("\$", "\\\$")
+        return ("window.__MERMAID_SHADOW_CSS=`" + cssText + "`;").toByteArray(Charsets.UTF_8)
+    }
+
     override fun dispose() {
+        exportHandler?.dispose()
         serverRegistration?.dispose()
         serverRegistration = null
     }
 
     class Provider : MarkdownBrowserPreviewExtension.Provider {
         override fun createBrowserExtension(panel: MarkdownHtmlPanel): MarkdownBrowserPreviewExtension {
-            return MermaidBrowserExtension()
+            var exportHandler: MermaidMarkdownExportHandler? = null
+            try {
+                val pipe = panel.getBrowserPipe()
+                val project = try {
+                    panel.getProject()
+                } catch (e: Exception) {
+                    LOG.debug("Could not obtain project from MarkdownHtmlPanel", e)
+                    null
+                }
+                if (pipe != null) {
+                    exportHandler = MermaidMarkdownExportHandler(project, pipe)
+                }
+            } catch (e: Exception) {
+                LOG.warn("BrowserPipe not available, export from Markdown preview disabled", e)
+            }
+            return MermaidBrowserExtension(exportHandler)
         }
     }
 }

@@ -10,6 +10,8 @@
         <ul>
             <li>Live rendering of <code>```mermaid</code> code blocks in the Markdown preview</li>
             <li>Dedicated split editor with live preview for <code>.mmd</code> and <code>.mermaid</code> files</li>
+            <li>Export diagrams as SVG or PNG — copy to clipboard or save to file</li>
+            <li>Hover toolbar on diagrams in the Markdown preview for quick export</li>
             <li>Automatic dark/light theme matching with your IDE</li>
             <li>Fully offline — Mermaid.js is bundled, no internet required</li>
             <li>Works in all JetBrains IDEs with Markdown support</li>
@@ -44,6 +46,9 @@
             implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidSyntaxHighlighterFactory"/>
         <colorSettingsPage
             implementation="com.alextdev.mermaidvisualizer.lang.MermaidColorSettingsPage"/>
+        <notificationGroup id="Mermaid Visualizer"
+                           displayType="BALLOON"
+                           key="notification.group.mermaid"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.intellij.markdown">

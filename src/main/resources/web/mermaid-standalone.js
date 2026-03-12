@@ -1,32 +1,150 @@
-// NOTE: Shadow DOM, error handling, and init logic are intentionally duplicated from mermaid-render.js.
-// The standalone editor loads resources via loadHTML() with inlined scripts, while the Markdown extension
-// serves resources via PreviewStaticServer. If modifying shared logic, update both files.
+// NOTE: Shadow DOM, error handling, init logic, export toolbar (icons, extraction, toolbar creation)
+// are intentionally duplicated from mermaid-render.js. The standalone editor loads resources via
+// loadHTML() with inlined scripts, while the Markdown extension serves resources via
+// PreviewStaticServer. Shadow styles are shared via mermaid-shadow.css.
+// If modifying shared logic, update both files.
 (function () {
     'use strict';
 
     const CLASS_ERROR = 'mermaid-error';
 
-    function buildShadowStyles(dark) {
-        const colors = dark
-            ? 'color: #e07060; background: #3c2020; border: 1px solid #5c3030'
-            : 'color: #c0392b; background: #fdf0ef; border: 1px solid #e6b0aa';
-        return 'svg { max-width: 100%; height: auto; }\n' +
-            '.' + CLASS_ERROR + ' {\n' +
-            '  ' + colors + ';\n' +
-            '  border-radius: 4px; padding: 12px; font-family: monospace;\n' +
-            '  font-size: 12px; white-space: pre-wrap; text-align: left; margin: 8px 0;\n' +
-            '}';
+    function utf8ToBase64(str) {
+        const bytes = new TextEncoder().encode(str);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        return btoa(binary);
     }
 
-    const SHADOW_STYLES_LIGHT = buildShadowStyles(false);
-    const SHADOW_STYLES_DARK = buildShadowStyles(true);
+    function base64ToUtf8(b64) {
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return new TextDecoder('utf-8').decode(bytes);
+    }
+
+    // Shadow CSS is loaded from a <style id="mermaid-shadow-styles"> element
+    // inlined in the HTML by MermaidPreviewPanel (Kotlin).
+    const shadowCssEl = document.getElementById('mermaid-shadow-styles');
+    const shadowCss = shadowCssEl ? shadowCssEl.textContent : '';
+
+    // --- Export: icon constants and toolbar ---
+
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const ICON_COPY = ['M5.5 2H12.5V12.5H5.5Z', 'M3.5 4.5V14H10.5'];
+    const ICON_IMAGE = ['M2 3H14V13H2Z', 'M2 11L5.5 7.5L8 10L10.5 7.5L14 11'];
+    const ICON_SAVE = ['M8 2V10', 'M4.5 7L8 10.5L11.5 7', 'M3 14H13'];
+
+    function createSvgIcon(paths) {
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        svg.setAttribute('width', '14');
+        svg.setAttribute('height', '14');
+        svg.setAttribute('viewBox', '0 0 16 16');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '1.5');
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('stroke-linejoin', 'round');
+        for (let i = 0; i < paths.length; i++) {
+            const path = document.createElementNS(SVG_NS, 'path');
+            path.setAttribute('d', paths[i]);
+            svg.appendChild(path);
+        }
+        return svg;
+    }
+
+    function createExportToolbar() {
+        if (typeof window.__copySvgBridge !== 'function' &&
+            typeof window.__copyPngBridge !== 'function' &&
+            typeof window.__saveBridge !== 'function') {
+            return null;
+        }
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'mermaid-export-toolbar';
+
+        function createButton(iconPaths, title, onClick) {
+            const btn = document.createElement('button');
+            btn.className = 'mermaid-export-btn';
+            btn.setAttribute('title', title);
+            btn.appendChild(createSvgIcon(iconPaths));
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                onClick();
+            });
+            return btn;
+        }
+
+        if (typeof window.__copySvgBridge === 'function') {
+            toolbar.appendChild(createButton(ICON_COPY, 'Copy SVG', function () {
+                try {
+                    const svgString = window.__extractSvg();
+                    if (!svgString) {
+                        console.warn('[MermaidVisualizer] Copy SVG: no SVG found in container');
+                        window.__copySvgBridge('');
+                        return;
+                    }
+                    window.__copySvgBridge(utf8ToBase64(svgString));
+                } catch (e) {
+                    console.error('[MermaidVisualizer] Copy SVG failed:', e);
+                }
+            }));
+        }
+
+        if (typeof window.__copyPngBridge === 'function') {
+            toolbar.appendChild(createButton(ICON_IMAGE, 'Copy PNG', function () {
+                try {
+                    window.__extractPng(2, function (b64) {
+                        try {
+                            window.__copyPngBridge(b64 || '');
+                        } catch (e) {
+                            console.error('[MermaidVisualizer] Copy PNG post failed:', e);
+                        }
+                    });
+                } catch (e) {
+                    console.error('[MermaidVisualizer] Copy PNG failed:', e);
+                }
+            }));
+        }
+
+        if (typeof window.__saveBridge === 'function') {
+            toolbar.appendChild(createButton(ICON_SAVE, 'Save\u2026', function () {
+                try {
+                    const svgString = window.__extractSvg();
+                    if (!svgString) {
+                        console.warn('[MermaidVisualizer] Save: no SVG found in container');
+                        window.__saveBridge(JSON.stringify({svg: '', png: ''}));
+                        return;
+                    }
+                    window.__extractPng(2, function (pngB64) {
+                        try {
+                            const payload = JSON.stringify({
+                                svg: utf8ToBase64(svgString),
+                                png: pngB64 || ''
+                            });
+                            window.__saveBridge(payload);
+                        } catch (e) {
+                            console.error('[MermaidVisualizer] Save encoding failed:', e);
+                        }
+                    });
+                } catch (e) {
+                    console.error('[MermaidVisualizer] Save failed:', e);
+                }
+            }));
+        }
+
+        return toolbar;
+    }
 
     function setShadowContent(el, contentEl, isDark) {
         const shadow = el.shadowRoot || el.attachShadow({ mode: 'open' });
-        const style = document.createElement('style');
-        style.textContent = isDark ? SHADOW_STYLES_DARK : SHADOW_STYLES_LIGHT;
+        el.classList.toggle('dark', isDark);
         shadow.textContent = '';
-        shadow.appendChild(style);
+        if (shadowCss) {
+            const style = document.createElement('style');
+            style.textContent = shadowCss;
+            shadow.appendChild(style);
+        }
         shadow.appendChild(contentEl);
     }
 
@@ -61,7 +179,7 @@
             });
         } catch (e) {
             console.error('[MermaidVisualizer] mermaid.initialize failed:', e);
-            var container = document.getElementById('mermaid-container');
+            const container = document.getElementById('mermaid-container');
             if (container) showError(container, 'Failed to initialize Mermaid: ' + e.message, null, theme === 'dark');
         }
     }
@@ -82,7 +200,7 @@
 
         let source;
         try {
-            source = atob(base64Source);
+            source = base64ToUtf8(base64Source);
         } catch (e) {
             showError(container, 'Failed to decode diagram source', null, isDark);
             return;
@@ -99,6 +217,8 @@
             const result = await mermaid.render(renderId, source);
             if (result && typeof result.svg === 'string') {
                 injectSvg(container, result.svg, isDark);
+                const toolbar = createExportToolbar();
+                if (toolbar) container.shadowRoot.appendChild(toolbar);
             } else {
                 showError(container, 'Unexpected render result', renderId, isDark);
             }
@@ -152,4 +272,63 @@
             }
         });
     }, { passive: true });
+
+    // --- Export functions ---
+
+    window.__extractSvg = function() {
+        const container = document.getElementById('mermaid-container');
+        const shadow = container ? container.shadowRoot : null;
+        const svg = shadow ? shadow.querySelector('svg') : null;
+        if (!svg) return null;
+        const clone = svg.cloneNode(true);
+        if (!clone.getAttribute('xmlns')) {
+            clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        }
+        return new XMLSerializer().serializeToString(clone);
+    };
+
+    // scale: multiplier for HiDPI output (2 = 2x resolution). Fallback 800x600 when SVG has no measured size.
+    window.__extractPng = function(scale, bridgeFn) {
+        const svgString = window.__extractSvg();
+        if (!svgString) { bridgeFn(''); return; }
+
+        const container = document.getElementById('mermaid-container');
+        const renderedSvg = container.shadowRoot.querySelector('svg');
+        const rect = renderedSvg.getBoundingClientRect();
+        const w = rect.width || 800;
+        const h = rect.height || 600;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(w * scale);
+        canvas.height = Math.ceil(h * scale);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            console.error('[MermaidVisualizer] Failed to get 2D canvas context');
+            bridgeFn('');
+            return;
+        }
+
+        const isDark = document.body.classList.contains('dark-theme');
+        ctx.fillStyle = isDark ? '#2b2b2b' : '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const svgDataUrl = 'data:image/svg+xml;base64,' + utf8ToBase64(svgString);
+        const img = new Image();
+        img.onload = function() {
+            try {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/png');
+                const b64 = dataUrl.substring(dataUrl.indexOf(',') + 1);
+                bridgeFn(b64);
+            } catch (e) {
+                console.error('[MermaidVisualizer] PNG extraction failed:', e);
+                bridgeFn('');
+            }
+        };
+        img.onerror = function() {
+            console.error('[MermaidVisualizer] PNG extraction failed: SVG image load error');
+            bridgeFn('');
+        };
+        img.src = svgDataUrl;
+    };
 })();

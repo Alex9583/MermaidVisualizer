@@ -83,14 +83,14 @@ class MermaidThemeTest {
     }
 
     @Test
-    fun `mermaid render js builds both light and dark shadow styles`() {
+    fun `mermaid render js loads shadow css and toggles dark class`() {
         assertTrue(
-            renderJs.contains("buildShadowStyles(false)"),
-            "mermaid-render.js should build light shadow styles"
+            renderJs.contains("mermaid-shadow.css"),
+            "mermaid-render.js should reference mermaid-shadow.css"
         )
         assertTrue(
-            renderJs.contains("buildShadowStyles(true)"),
-            "mermaid-render.js should build dark shadow styles"
+            renderJs.contains("classList.toggle"),
+            "mermaid-render.js should toggle dark class on host elements"
         )
     }
 

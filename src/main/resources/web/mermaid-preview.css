@@ -3,4 +3,5 @@
     padding: 16px 8px;
     overflow-x: auto;
     min-height: 40px;
+    position: relative;
 }
