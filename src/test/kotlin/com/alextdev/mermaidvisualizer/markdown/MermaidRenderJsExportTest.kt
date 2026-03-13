@@ -1,6 +1,6 @@
 package com.alextdev.mermaidvisualizer.markdown
 
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -87,5 +87,49 @@ class MermaidRenderJsExportTest {
     fun `render js Save sends error payload when no SVG found`() {
         assertTrue(jsContent.contains("pipe.post('mermaid/save', JSON.stringify"),
             "Save button should send error payload to Kotlin when no SVG found")
+    }
+
+    // --- Zoom integration tests ---
+
+    @Test
+    fun `render js calls initMermaidZoom`() {
+        assertTrue(jsContent.contains("__initMermaidZoom"), "Should call __initMermaidZoom for zoom support")
+    }
+
+    @Test
+    fun `render js passes fitMode width`() {
+        assertTrue(jsContent.contains("fitMode: 'width'"), "Should pass fitMode 'width' for Markdown preview")
+    }
+
+    @Test
+    fun `render js passes wheelRequiresModifier true`() {
+        assertTrue(jsContent.contains("wheelRequiresModifier: true"), "Should pass wheelRequiresModifier true for Markdown")
+    }
+
+    @Test
+    fun `render js extractPng uses viewBox for dimensions`() {
+        assertTrue(jsContent.contains("viewBox"), "extractPngFromContainer should use SVG viewBox for natural dimensions")
+    }
+
+    // --- Shadow CSS zoom styles ---
+
+    @Test
+    fun `shadow css has zoom viewport styles`() {
+        assertTrue(shadowCssContent.contains(".mermaid-zoom-viewport"), "Shadow CSS should style mermaid-zoom-viewport")
+    }
+
+    @Test
+    fun `shadow css has zoom content styles`() {
+        assertTrue(shadowCssContent.contains(".mermaid-zoom-content"), "Shadow CSS should style mermaid-zoom-content")
+    }
+
+    @Test
+    fun `shadow css has toolbar divider`() {
+        assertTrue(shadowCssContent.contains(".mermaid-toolbar-divider"), "Shadow CSS should style mermaid-toolbar-divider")
+    }
+
+    @Test
+    fun `shadow css has zoom label`() {
+        assertTrue(shadowCssContent.contains(".mermaid-zoom-label"), "Shadow CSS should style mermaid-zoom-label")
     }
 }

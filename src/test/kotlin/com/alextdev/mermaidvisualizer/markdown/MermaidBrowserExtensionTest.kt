@@ -20,12 +20,13 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
         }
     }
 
-    fun testScriptsContainsThreeUrls() {
+    fun testScriptsContainsFourUrls() {
         val scripts = extension.scripts
-        assertEquals(3, scripts.size)
+        assertEquals(4, scripts.size)
         assertTrue("First script URL should end with mermaid.min.js", scripts[0].endsWith("mermaid.min.js"))
         assertTrue("Second script URL should end with mermaid-shadow-css-init.js", scripts[1].endsWith("mermaid-shadow-css-init.js"))
-        assertTrue("Third script URL should end with mermaid-render.js", scripts[2].endsWith("mermaid-render.js"))
+        assertTrue("Third script URL should end with mermaid-zoom.js", scripts[2].endsWith("mermaid-zoom.js"))
+        assertTrue("Fourth script URL should end with mermaid-render.js", scripts[3].endsWith("mermaid-render.js"))
     }
 
     fun testStylesContainsOneUrl() {
@@ -40,6 +41,7 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
 
     fun testCanProvideReturnsTrueForKnownResources() {
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid.min.js"))
+        assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-zoom.js"))
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-render.js"))
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-preview.css"))
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-shadow.css"))
@@ -55,6 +57,9 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
     fun testLoadResourceReturnsNonNullForKnownFiles() {
         val jsResource = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid.min.js")
         assertNotNull("mermaid.min.js should be loadable", jsResource)
+
+        val zoomResource = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid-zoom.js")
+        assertNotNull("mermaid-zoom.js should be loadable", zoomResource)
 
         val renderResource = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid-render.js")
         assertNotNull("mermaid-render.js should be loadable", renderResource)

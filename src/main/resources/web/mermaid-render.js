@@ -65,6 +65,9 @@
     // by MermaidBrowserExtension (Kotlin) that inlines mermaid-shadow.css into window.__MERMAID_SHADOW_CSS.
     // It is served via PreviewStaticServer and loaded before this script.
     const shadowCss = window.__MERMAID_SHADOW_CSS || '';
+    if (!shadowCss) {
+        console.warn('[MermaidVisualizer] Shadow CSS not loaded — toolbar and zoom controls may not display correctly');
+    }
 
     /**
      * Returns the parent pre wrapper if it exists, otherwise the element itself.
@@ -132,9 +135,10 @@
         if (!svgString) { callback(''); return; }
 
         const renderedSvg = container.shadowRoot.querySelector('svg');
-        const rect = renderedSvg.getBoundingClientRect();
-        const w = rect.width || 800;
-        const h = rect.height || 600;
+        if (!renderedSvg) { callback(''); return; }
+        const vb = renderedSvg.viewBox ? renderedSvg.viewBox.baseVal : null;
+        const w = (vb && vb.width > 0) ? vb.width : (parseFloat(renderedSvg.getAttribute('width')) || 800);
+        const h = (vb && vb.height > 0) ? vb.height : (parseFloat(renderedSvg.getAttribute('height')) || 600);
 
         const canvas = document.createElement('canvas');
         canvas.width = Math.ceil(w * scale);
@@ -226,6 +230,7 @@
                 pipe.post('mermaid/copy-svg', utf8ToBase64(svgString));
             } catch (e) {
                 console.error('[MermaidVisualizer] Copy SVG failed:', e);
+                pipe.post('mermaid/copy-svg', '');
             }
         }));
 
@@ -240,6 +245,7 @@
                 });
             } catch (e) {
                 console.error('[MermaidVisualizer] Copy PNG failed:', e);
+                pipe.post('mermaid/copy-png', '');
             }
         }));
 
@@ -248,7 +254,6 @@
                 const svgString = extractSvgFromContainer(container);
                 if (!svgString) {
                     console.warn('[MermaidVisualizer] Save: no SVG found in container');
-                    pipe.post('mermaid/save', JSON.stringify({svg: '', png: ''}));
                     return;
                 }
                 extractPngFromContainer(container, 2, function (pngB64) {
@@ -264,6 +269,7 @@
                 });
             } catch (e) {
                 console.error('[MermaidVisualizer] Save failed:', e);
+                pipe.post('mermaid/save', JSON.stringify({svg: '', png: ''}));
             }
         }));
 
@@ -293,6 +299,14 @@
                 injectSvg(container, result.svg, isDark);
                 const toolbar = createExportToolbar(container);
                 if (toolbar) container.shadowRoot.appendChild(toolbar);
+                if (window.__initMermaidZoom) {
+                    window.__initMermaidZoom(container.shadowRoot, {
+                        fitMode: 'width',
+                        toolbarEl: container.shadowRoot.querySelector('.mermaid-export-toolbar'),
+                        wheelRequiresModifier: true,
+                        constrainSvg: false
+                    });
+                }
             } else {
                 showRenderError(container, 'Unexpected render result', renderId, isDark);
             }

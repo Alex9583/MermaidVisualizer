@@ -93,6 +93,7 @@ internal class MermaidPreviewFileEditor(
     }
 
     fun attachEditor(editor: Editor) {
+        check(this.editor == null) { "Editor already attached" }
         this.editor = editor
         editor.scrollingModel.addVisibleAreaListener({ onEditorScroll() }, this)
         panel?.setScrollCallback { fraction -> onPreviewScroll(fraction) }

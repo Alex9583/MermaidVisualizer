@@ -10,8 +10,8 @@
         <ul>
             <li>Live rendering of <code>```mermaid</code> code blocks in the Markdown preview</li>
             <li>Dedicated split editor with live preview for <code>.mmd</code> and <code>.mermaid</code> files</li>
+            <li>Zoom (<code>Ctrl+wheel</code>), pan, fit-to-window and 1:1 controls</li>
             <li>Export diagrams as SVG or PNG — copy to clipboard or save to file</li>
-            <li>Hover toolbar on diagrams in the Markdown preview for quick export</li>
             <li>Automatic dark/light theme matching with your IDE</li>
             <li>Fully offline — Mermaid.js is bundled, no internet required</li>
             <li>Works in all JetBrains IDEs with Markdown support</li>

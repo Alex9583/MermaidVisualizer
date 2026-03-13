@@ -10,11 +10,16 @@ import org.intellij.plugins.markdown.ui.preview.ResourceProvider
 
 private val LOG = Logger.getInstance("MermaidVisualizer")
 
-private const val SHADOW_CSS_INIT_SCRIPT = "mermaid-shadow-css-init.js"
+private const val RES_MERMAID_JS = "mermaid.min.js"
+private const val RES_ZOOM_JS = "mermaid-zoom.js"
+private const val RES_RENDER_JS = "mermaid-render.js"
+private const val RES_PREVIEW_CSS = "mermaid-preview.css"
+private const val RES_SHADOW_CSS = "mermaid-shadow.css"
+private const val RES_SHADOW_CSS_INIT_JS = "mermaid-shadow-css-init.js"
 
 private val RESOURCE_NAMES = setOf(
-    "mermaid.min.js", "mermaid-render.js", "mermaid-preview.css",
-    "mermaid-shadow.css", SHADOW_CSS_INIT_SCRIPT,
+    RES_MERMAID_JS, RES_ZOOM_JS, RES_RENDER_JS,
+    RES_PREVIEW_CSS, RES_SHADOW_CSS, RES_SHADOW_CSS_INIT_JS,
 )
 
 private val resourceCache = mutableMapOf<String, ResourceProvider.Resource>()
@@ -44,9 +49,10 @@ internal class MermaidBrowserExtension(
     override val scripts: List<String>
         get() = try {
             listOf(
-                PreviewStaticServer.getStaticUrl(this, "mermaid.min.js"),
-                PreviewStaticServer.getStaticUrl(this, SHADOW_CSS_INIT_SCRIPT),
-                PreviewStaticServer.getStaticUrl(this, "mermaid-render.js"),
+                PreviewStaticServer.getStaticUrl(this, RES_MERMAID_JS),
+                PreviewStaticServer.getStaticUrl(this, RES_SHADOW_CSS_INIT_JS),
+                PreviewStaticServer.getStaticUrl(this, RES_ZOOM_JS),
+                PreviewStaticServer.getStaticUrl(this, RES_RENDER_JS),
             )
         } catch (e: Exception) {
             LOG.error("Failed to generate script URLs for Mermaid preview", e)
@@ -56,7 +62,7 @@ internal class MermaidBrowserExtension(
     override val styles: List<String>
         get() = try {
             listOf(
-                PreviewStaticServer.getStaticUrl(this, "mermaid-preview.css"),
+                PreviewStaticServer.getStaticUrl(this, RES_PREVIEW_CSS),
             )
         } catch (e: Exception) {
             LOG.error("Failed to generate style URLs for Mermaid preview", e)
@@ -103,7 +109,7 @@ internal class MermaidBrowserExtension(
     }
 
     private fun loadResourceBytes(name: String): ByteArray? {
-        if (name == SHADOW_CSS_INIT_SCRIPT) {
+        if (name == RES_SHADOW_CSS_INIT_JS) {
             return buildShadowCssInitScript()
         }
         return javaClass.classLoader.getResourceAsStream("web/$name")?.use { it.readBytes() }

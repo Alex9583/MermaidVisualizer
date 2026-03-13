@@ -80,3 +80,41 @@ svg {
 .mermaid-export-btn svg {
     pointer-events: none;
 }
+
+/* Zoom viewport — clips content, captures events */
+.mermaid-zoom-viewport {
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+.mermaid-zoom-viewport.can-pan { cursor: grab; }
+.mermaid-zoom-viewport.panning { cursor: grabbing; }
+
+/* Zoom content — receives CSS transform */
+.mermaid-zoom-content {
+    transform-origin: 0 0;
+    display: inline-block;
+}
+
+/* Override: inside unconstrained zoom viewport, SVG should not be width-limited */
+.mermaid-zoom-viewport.unconstrained svg { max-width: none; }
+
+/* Toolbar divider between zoom and export controls */
+.mermaid-toolbar-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--mermaid-btn-border);
+    margin: 0 2px;
+    align-self: center;
+}
+
+/* Zoom level label */
+.mermaid-zoom-label {
+    font-size: 10px;
+    color: var(--mermaid-btn-color);
+    line-height: 28px;
+    min-width: 32px;
+    text-align: center;
+    user-select: none;
+}

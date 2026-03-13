@@ -102,7 +102,11 @@ internal class MermaidPreviewPanel(
                 ApplicationManager.getApplication().invokeLater {
                     if (browser.isDisposed) return@invokeLater
                     pendingRender = null
-                    val errorMsg = errorText ?: "Unknown error"
+                    val errorMsg = (errorText ?: "Unknown error")
+                        .replace("\\", "\\\\")
+                        .replace("'", "\\'")
+                        .replace("\n", "\\n")
+                        .replace("\r", "")
                     browser.cefBrowser.executeJavaScript(
                         """
                         document.body.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#999';
@@ -183,12 +187,14 @@ internal class MermaidPreviewPanel(
 
         private fun buildHtml(): String {
             val mermaidJs = loadResource("web/mermaid.min.js")
+            val zoomJs = loadResource("web/mermaid-zoom.js")
             val standaloneJs = loadResource("web/mermaid-standalone.js")
             val standaloneCss = loadResource("web/mermaid-standalone.css")
             val shadowCss = loadResource("web/mermaid-shadow.css")
 
-            return buildString(mermaidJs.length + standaloneJs.length + standaloneCss.length + shadowCss.length + 512) {
+            return buildString(mermaidJs.length + zoomJs.length + standaloneJs.length + standaloneCss.length + shadowCss.length + 512) {
                 append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\">")
+                append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">")
                 append("<style>")
                 append(standaloneCss)
                 append("</style>")
@@ -199,6 +205,9 @@ internal class MermaidPreviewPanel(
                 append("<div id=\"mermaid-container\"></div>")
                 append("<script>")
                 append(mermaidJs)
+                append("</script>")
+                append("<script>")
+                append(zoomJs)
                 append("</script>")
                 append("<script>")
                 append(standaloneJs)

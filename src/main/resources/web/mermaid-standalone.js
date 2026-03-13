@@ -26,6 +26,9 @@
     // inlined in the HTML by MermaidPreviewPanel (Kotlin).
     const shadowCssEl = document.getElementById('mermaid-shadow-styles');
     const shadowCss = shadowCssEl ? shadowCssEl.textContent : '';
+    if (!shadowCss) {
+        console.warn('[MermaidVisualizer] Shadow CSS not loaded — toolbar and zoom controls may not display correctly');
+    }
 
     // --- Export: icon constants and toolbar ---
 
@@ -87,6 +90,7 @@
                     window.__copySvgBridge(utf8ToBase64(svgString));
                 } catch (e) {
                     console.error('[MermaidVisualizer] Copy SVG failed:', e);
+                    window.__copySvgBridge('');
                 }
             }));
         }
@@ -103,6 +107,7 @@
                     });
                 } catch (e) {
                     console.error('[MermaidVisualizer] Copy PNG failed:', e);
+                    window.__copyPngBridge('');
                 }
             }));
         }
@@ -113,7 +118,6 @@
                     const svgString = window.__extractSvg();
                     if (!svgString) {
                         console.warn('[MermaidVisualizer] Save: no SVG found in container');
-                        window.__saveBridge(JSON.stringify({svg: '', png: ''}));
                         return;
                     }
                     window.__extractPng(2, function (pngB64) {
@@ -129,6 +133,7 @@
                     });
                 } catch (e) {
                     console.error('[MermaidVisualizer] Save failed:', e);
+                    window.__saveBridge(JSON.stringify({svg: '', png: ''}));
                 }
             }));
         }
@@ -219,6 +224,24 @@
                 injectSvg(container, result.svg, isDark);
                 const toolbar = createExportToolbar();
                 if (toolbar) container.shadowRoot.appendChild(toolbar);
+                if (window.__initMermaidZoom) {
+                    window.__initMermaidZoom(container.shadowRoot, {
+                        fitMode: 'width',
+                        toolbarEl: container.shadowRoot.querySelector('.mermaid-export-toolbar'),
+                        wheelRequiresModifier: true,
+                        enableKeyboard: true,
+                        scrollSyncCallback: function (fraction) {
+                            if (scrollGuardActive) return;
+                            if (typeof window.__mermaidScrollBridge === 'function') {
+                                try {
+                                    window.__mermaidScrollBridge(String(fraction));
+                                } catch (e) {
+                                    console.error('[MermaidVisualizer] scroll bridge call failed:', e);
+                                }
+                            }
+                        }
+                    });
+                }
             } else {
                 showError(container, 'Unexpected render result', renderId, isDark);
             }
@@ -233,45 +256,21 @@
 
     initMermaid('default');
 
-    // --- Scroll synchronization ---
+    // --- Scroll synchronization (routed through zoom module pan at scale ~1.0) ---
     const SCROLL_GUARD_RESET_MS = 100;
     let scrollGuardActive = false;
-
-    function getScrollableHeight() {
-        return document.documentElement.scrollHeight - window.innerHeight;
-    }
 
     // Called from Kotlin to scroll preview to a proportional position
     window.__scrollPreviewTo = function (fraction) {
         if (typeof fraction !== 'number' || !isFinite(fraction)) return;
-        const scrollableHeight = getScrollableHeight();
-        if (scrollableHeight <= 0) return;
+        const container = document.getElementById('mermaid-container');
+        if (!container || !container.shadowRoot || !window.__scrollZoomTo) return;
         scrollGuardActive = true;
-        window.scrollTo(0, fraction * scrollableHeight);
+        window.__scrollZoomTo(container.shadowRoot, fraction);
         requestAnimationFrame(function () {
             setTimeout(function () { scrollGuardActive = false; }, SCROLL_GUARD_RESET_MS);
         });
     };
-
-    // Throttled scroll listener — reports position to Kotlin via JBCefJSQuery bridge
-    let scrollRAF = null;
-    window.addEventListener('scroll', function () {
-        if (scrollGuardActive || scrollRAF) return;
-        scrollRAF = requestAnimationFrame(function () {
-            scrollRAF = null;
-            if (scrollGuardActive) return;
-            const scrollableHeight = getScrollableHeight();
-            if (scrollableHeight <= 0) return;
-            const fraction = window.scrollY / scrollableHeight;
-            if (typeof window.__mermaidScrollBridge === 'function') {
-                try {
-                    window.__mermaidScrollBridge(String(fraction));
-                } catch (e) {
-                    console.error('[MermaidVisualizer] scroll bridge call failed:', e);
-                }
-            }
-        });
-    }, { passive: true });
 
     // --- Export functions ---
 
@@ -294,9 +293,10 @@
 
         const container = document.getElementById('mermaid-container');
         const renderedSvg = container.shadowRoot.querySelector('svg');
-        const rect = renderedSvg.getBoundingClientRect();
-        const w = rect.width || 800;
-        const h = rect.height || 600;
+        if (!renderedSvg) { bridgeFn(''); return; }
+        const vb = renderedSvg.viewBox ? renderedSvg.viewBox.baseVal : null;
+        const w = (vb && vb.width > 0) ? vb.width : (parseFloat(renderedSvg.getAttribute('width')) || 800);
+        const h = (vb && vb.height > 0) ? vb.height : (parseFloat(renderedSvg.getAttribute('height')) || 600);
 
         const canvas = document.createElement('canvas');
         canvas.width = Math.ceil(w * scale);

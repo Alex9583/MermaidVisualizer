@@ -76,6 +76,7 @@ internal fun copyPngToClipboard(b64: String, project: Project?) {
 internal data class ExportPayload(val svgB64: String, val pngB64: String?) {
     init {
         require(svgB64.isNotEmpty()) { "svgB64 must not be empty" }
+        require(pngB64 == null || pngB64.isNotEmpty()) { "pngB64 must be null or non-empty" }
     }
 
     companion object {
@@ -113,6 +114,7 @@ private fun writeDiagramFile(outputFile: File, payload: ExportPayload, isPng: Bo
         try {
             val bytes = decodePayloadBytes(payload, isPng)
             if (bytes.isEmpty()) {
+                LOG.warn("Decoded payload bytes are empty for ${outputFile.name}")
                 ApplicationManager.getApplication().invokeLater {
                     notifyMermaid(project, MyMessageBundle.message("markdown.export.save.failed"), NotificationType.ERROR)
                 }

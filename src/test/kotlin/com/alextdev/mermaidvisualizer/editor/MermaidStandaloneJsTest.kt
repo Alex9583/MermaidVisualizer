@@ -83,7 +83,7 @@ class MermaidStandaloneJsTest {
     fun `standalone js scroll sync has defensive guards`() {
         assertTrue(jsContent.contains("scrollGuardActive"), "Should have scroll guard to prevent feedback loops")
         assertTrue(jsContent.contains("isFinite"), "Should validate fraction parameter")
-        assertTrue(jsContent.contains("passive"), "Should use passive scroll listener")
+        assertTrue(jsContent.contains("__scrollZoomTo"), "Should use zoom module for scroll sync")
     }
 
     @Test
@@ -201,5 +201,37 @@ class MermaidStandaloneJsTest {
     fun `standalone js Save sends error payload when no SVG found`() {
         assertTrue(jsContent.contains("__saveBridge(JSON.stringify"),
             "Save button should send error payload to Kotlin when no SVG found")
+    }
+
+    // --- Zoom integration tests ---
+
+    @Test
+    fun `standalone js calls initMermaidZoom`() {
+        assertTrue(jsContent.contains("__initMermaidZoom"), "Should call __initMermaidZoom for zoom support")
+    }
+
+    @Test
+    fun `standalone js passes fitMode width`() {
+        assertTrue(jsContent.contains("fitMode: 'width'"), "Should pass fitMode 'width' for standalone editor")
+    }
+
+    @Test
+    fun `standalone js passes wheelRequiresModifier true`() {
+        assertTrue(jsContent.contains("wheelRequiresModifier: true"), "Should pass wheelRequiresModifier true for standalone (Ctrl+wheel to zoom)")
+    }
+
+    @Test
+    fun `standalone css has height 100vh`() {
+        assertTrue(cssContent.contains("height: 100vh"), "Container should have height: 100vh for fit-to-window")
+    }
+
+    @Test
+    fun `standalone css has overflow hidden`() {
+        assertTrue(cssContent.contains("overflow: hidden"), "Container should have overflow: hidden for zoom viewport")
+    }
+
+    @Test
+    fun `standalone js extractPng uses viewBox for dimensions`() {
+        assertTrue(jsContent.contains("viewBox"), "extractPng should use SVG viewBox for natural dimensions")
     }
 }

@@ -18,8 +18,8 @@ body.dark-theme {
 #mermaid-container {
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    padding: 24px 16px;
-    min-height: 100vh;
-    overflow: auto;
+    align-items: center;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
 }
