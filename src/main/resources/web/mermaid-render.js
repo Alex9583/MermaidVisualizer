@@ -4,7 +4,7 @@
     // Attribute schema:
     // - data-mermaid-processed: set on the original <code> element to skip empty blocks on re-scan
     // - data-processed (ATTR_PROCESSED): set on .mermaid-diagram container after render completes
-    //   (success or error) — used by onThemeChange to find re-renderable diagrams
+    //   (success or error) — used by reInitAndRenderAll to find re-renderable diagrams (theme change and config update)
     // - data-source (ATTR_SOURCE): stores the original Mermaid source text on the container,
     //   used for re-rendering on theme change without needing the original <code> element
     const SELECTOR_UNPROCESSED = 'code.language-mermaid:not([data-mermaid-processed])';
@@ -54,23 +54,19 @@
         return false;
     }
 
-    function buildShadowStyles(dark) {
-        const colors = dark
-            ? 'color: #e07060; background: #3c2020; border: 1px solid #5c3030'
-            : 'color: #c0392b; background: #fdf0ef; border: 1px solid #e6b0aa';
-        return 'svg { max-width: 100%; height: auto; }\n' +
-            '.' + CLASS_ERROR + ' {\n' +
-            '  ' + colors + ';\n' +
-            '  border-radius: 4px; padding: 12px; font-family: monospace;\n' +
-            '  font-size: 12px; white-space: pre-wrap; text-align: left; margin: 8px 0;\n' +
-            '}';
+    function utf8ToBase64(str) {
+        const bytes = new TextEncoder().encode(str);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        return btoa(binary);
     }
 
-    const SHADOW_STYLES_LIGHT = buildShadowStyles(false);
-    const SHADOW_STYLES_DARK = buildShadowStyles(true);
-
-    function shadowStyles(dark) {
-        return dark ? SHADOW_STYLES_DARK : SHADOW_STYLES_LIGHT;
+    // Shadow CSS is set by mermaid-shadow-css-init.js, a virtual script generated at runtime
+    // by MermaidBrowserExtension (Kotlin) that inlines mermaid-shadow.css into window.__MERMAID_SHADOW_CSS.
+    // It is served via PreviewStaticServer and loaded before this script.
+    const shadowCss = window.__MERMAID_SHADOW_CSS || '';
+    if (!shadowCss) {
+        console.warn('[MermaidVisualizer] Shadow CSS not loaded — toolbar and zoom controls may not display correctly');
     }
 
     /**
@@ -87,8 +83,9 @@
      */
     function setShadowContent(el, contentEl, isDark) {
         const shadow = el.shadowRoot || el.attachShadow({ mode: 'open' });
+        el.classList.toggle('dark', isDark);
         const style = document.createElement('style');
-        style.textContent = shadowStyles(isDark);
+        style.textContent = shadowCss;
         shadow.textContent = '';
         shadow.appendChild(style);
         shadow.appendChild(contentEl);
@@ -118,17 +115,186 @@
         }
     }
 
+    // --- Export: extraction functions ---
+    // In the Markdown preview context, export data is sent to Kotlin via window.__IntelliJTools.messagePipe (BrowserPipe).
+
+    function extractSvgFromContainer(container) {
+        const shadow = container ? container.shadowRoot : null;
+        const svg = shadow ? shadow.querySelector('svg') : null;
+        if (!svg) return null;
+        const clone = svg.cloneNode(true);
+        if (!clone.getAttribute('xmlns')) {
+            clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        }
+        return new XMLSerializer().serializeToString(clone);
+    }
+
+    // scale: multiplier for HiDPI output (2 = 2x resolution). Fallback 800x600 when SVG has no measured size.
+    function extractPngFromContainer(container, scale, callback) {
+        const svgString = extractSvgFromContainer(container);
+        if (!svgString) { callback(''); return; }
+
+        const renderedSvg = container.shadowRoot.querySelector('svg');
+        if (!renderedSvg) { callback(''); return; }
+        const vb = renderedSvg.viewBox ? renderedSvg.viewBox.baseVal : null;
+        const w = (vb && vb.width > 0) ? vb.width : (parseFloat(renderedSvg.getAttribute('width')) || 800);
+        const h = (vb && vb.height > 0) ? vb.height : (parseFloat(renderedSvg.getAttribute('height')) || 600);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(w * scale);
+        canvas.height = Math.ceil(h * scale);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            console.error('[MermaidVisualizer] Failed to get 2D canvas context');
+            callback('');
+            return;
+        }
+
+        const dark = isDarkTheme();
+        ctx.fillStyle = dark ? '#2b2b2b' : '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const svgDataUrl = 'data:image/svg+xml;base64,' + utf8ToBase64(svgString);
+        const img = new Image();
+        img.onload = function () {
+            try {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/png');
+                const b64 = dataUrl.substring(dataUrl.indexOf(',') + 1);
+                callback(b64);
+            } catch (e) {
+                console.error('[MermaidVisualizer] PNG extraction failed:', e);
+                callback('');
+            }
+        };
+        img.onerror = function () {
+            console.error('[MermaidVisualizer] PNG extraction failed: SVG image load error');
+            callback('');
+        };
+        img.src = svgDataUrl;
+    }
+
+    // --- Export: toolbar creation ---
+
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const ICON_COPY = ['M5.5 2H12.5V12.5H5.5Z', 'M3.5 4.5V14H10.5'];
+    const ICON_IMAGE = ['M2 3H14V13H2Z', 'M2 11L5.5 7.5L8 10L10.5 7.5L14 11'];
+    const ICON_SAVE = ['M8 2V10', 'M4.5 7L8 10.5L11.5 7', 'M3 14H13'];
+
+    function createSvgIcon(paths) {
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        svg.setAttribute('width', '14');
+        svg.setAttribute('height', '14');
+        svg.setAttribute('viewBox', '0 0 16 16');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '1.5');
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('stroke-linejoin', 'round');
+        for (let i = 0; i < paths.length; i++) {
+            const path = document.createElementNS(SVG_NS, 'path');
+            path.setAttribute('d', paths[i]);
+            svg.appendChild(path);
+        }
+        return svg;
+    }
+
+    function createExportToolbar(container) {
+        if (!window.__IntelliJTools || !window.__IntelliJTools.messagePipe) return null;
+        const pipe = window.__IntelliJTools.messagePipe;
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'mermaid-export-toolbar';
+
+        function createButton(iconPaths, title, onClick) {
+            const btn = document.createElement('button');
+            btn.className = 'mermaid-export-btn';
+            btn.setAttribute('title', title);
+            btn.appendChild(createSvgIcon(iconPaths));
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                onClick();
+            });
+            return btn;
+        }
+
+        toolbar.appendChild(createButton(ICON_COPY, 'Copy SVG', function () {
+            try {
+                const svgString = extractSvgFromContainer(container);
+                if (!svgString) {
+                    console.warn('[MermaidVisualizer] Copy SVG: no SVG found in container');
+                    pipe.post('mermaid/copy-svg', '');
+                    return;
+                }
+                pipe.post('mermaid/copy-svg', utf8ToBase64(svgString));
+            } catch (e) {
+                console.error('[MermaidVisualizer] Copy SVG failed:', e);
+                pipe.post('mermaid/copy-svg', '');
+            }
+        }));
+
+        toolbar.appendChild(createButton(ICON_IMAGE, 'Copy PNG', function () {
+            try {
+                extractPngFromContainer(container, 2, function (b64) {
+                    try {
+                        pipe.post('mermaid/copy-png', b64 || '');
+                    } catch (e) {
+                        console.error('[MermaidVisualizer] Copy PNG post failed:', e);
+                    }
+                });
+            } catch (e) {
+                console.error('[MermaidVisualizer] Copy PNG failed:', e);
+                pipe.post('mermaid/copy-png', '');
+            }
+        }));
+
+        toolbar.appendChild(createButton(ICON_SAVE, 'Save\u2026', function () {
+            try {
+                const svgString = extractSvgFromContainer(container);
+                if (!svgString) {
+                    console.warn('[MermaidVisualizer] Save: no SVG found in container');
+                    return;
+                }
+                extractPngFromContainer(container, 2, function (pngB64) {
+                    try {
+                        const payload = JSON.stringify({
+                            svg: utf8ToBase64(svgString),
+                            png: pngB64 || ''
+                        });
+                        pipe.post('mermaid/save', payload);
+                    } catch (e) {
+                        console.error('[MermaidVisualizer] Save encoding failed:', e);
+                    }
+                });
+            } catch (e) {
+                console.error('[MermaidVisualizer] Save failed:', e);
+                pipe.post('mermaid/save', JSON.stringify({svg: '', png: ''}));
+            }
+        }));
+
+        return toolbar;
+    }
+
     let currentTheme = 'default';
     let renderCounter = 0;
 
     function initMermaid(theme) {
-        currentTheme = theme;
-        mermaid.initialize({
-            startOnLoad: false,
-            maxTextSize: 100000,
-            theme: currentTheme,
-            securityLevel: 'strict'
-        });
+        const cfg = window.__MERMAID_CONFIG || {};
+        currentTheme = cfg.theme || theme;
+        try {
+            const opts = {
+                startOnLoad: false,
+                maxTextSize: cfg.maxTextSize ?? 100000,
+                theme: currentTheme,
+                look: cfg.look || 'classic',
+                securityLevel: 'strict'
+            };
+            if (cfg.fontFamily) opts.fontFamily = cfg.fontFamily;
+            mermaid.initialize(opts);
+        } catch (e) {
+            console.error('[MermaidVisualizer] mermaid.initialize failed:', e);
+        }
     }
 
     let rendering = false;
@@ -139,6 +305,16 @@
             const result = await mermaid.render(renderId, source);
             if (result && typeof result.svg === 'string') {
                 injectSvg(container, result.svg, isDark);
+                const toolbar = createExportToolbar(container);
+                if (toolbar) container.shadowRoot.appendChild(toolbar);
+                if (window.__initMermaidZoom) {
+                    window.__initMermaidZoom(container.shadowRoot, {
+                        fitMode: 'width',
+                        toolbarEl: container.shadowRoot.querySelector('.mermaid-export-toolbar'),
+                        wheelRequiresModifier: true,
+                        constrainSvg: false
+                    });
+                }
             } else {
                 showRenderError(container, 'Unexpected render result', renderId, isDark);
             }
@@ -214,26 +390,20 @@
         }).observe(document.body, { childList: true, subtree: true });
     }
 
-    let themeChangeTimer = null;
-
-    function onThemeChange() {
-        clearTimeout(themeChangeTimer);
-        themeChangeTimer = setTimeout(doThemeChange, 100);
-    }
-
-    async function doThemeChange() {
-        const isDark = isDarkTheme();
-        const newTheme = isDark ? 'dark' : 'default';
-        if (newTheme === currentTheme) return;
-
+    async function reInitAndRenderAll(retries) {
         if (rendering) {
-            setTimeout(onThemeChange, 50);
+            if ((retries || 0) >= 10) {
+                console.warn('[MermaidVisualizer] reInitAndRenderAll: abandoned after 10 retries — a render may be stuck');
+                return;
+            }
+            setTimeout(function () { reInitAndRenderAll((retries || 0) + 1); }, 50);
             return;
         }
         rendering = true;
 
         try {
-            initMermaid(newTheme);
+            const isDark = isDarkTheme();
+            initMermaid(isDark ? 'dark' : 'default');
 
             const diagrams = document.querySelectorAll('.' + CLASS_DIAGRAM + '[' + ATTR_PROCESSED + ']');
             for (let i = 0; i < diagrams.length; i++) {
@@ -249,6 +419,17 @@
         } finally {
             rendering = false;
         }
+    }
+
+    let themeChangeTimer = null;
+
+    function onThemeChange() {
+        clearTimeout(themeChangeTimer);
+        themeChangeTimer = setTimeout(function () {
+            const isDark = isDarkTheme();
+            const newTheme = isDark ? 'dark' : 'default';
+            if (newTheme !== currentTheme) reInitAndRenderAll();
+        }, 100);
     }
 
     function setupThemeObserver() {
@@ -305,11 +486,28 @@
         }
 
         setupThemeObserver();
+        setupConfigListener();
         renderDiagrams();
 
         // Delayed theme sync: IntelliJ may apply theme styles after initial page load,
         // so we re-check the theme shortly after bootstrap to catch late changes.
         setTimeout(onThemeChange, 500);
+    }
+
+    function setupConfigListener() {
+        if (!window.__IntelliJTools || !window.__IntelliJTools.messagePipe) {
+            console.debug('[MermaidVisualizer] messagePipe not available — live config updates disabled');
+            return;
+        }
+        window.__IntelliJTools.messagePipe.subscribe('mermaid/config', function (jsonStr) {
+            try {
+                window.__MERMAID_CONFIG = JSON.parse(jsonStr);
+            } catch (e) {
+                console.warn('[MermaidVisualizer] Failed to parse config update', e);
+                return;
+            }
+            reInitAndRenderAll();
+        });
     }
 
     if (document.readyState === 'loading') {

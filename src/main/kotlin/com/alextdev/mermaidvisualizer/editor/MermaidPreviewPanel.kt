@@ -1,8 +1,14 @@
 package com.alextdev.mermaidvisualizer.editor
 
+import com.alextdev.mermaidvisualizer.copyPngToClipboard
+import com.alextdev.mermaidvisualizer.copySvgToClipboard
+import com.alextdev.mermaidvisualizer.saveDiagramToFile
+import com.alextdev.mermaidvisualizer.settings.MermaidSettings
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.components.service
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
@@ -20,19 +26,27 @@ private val LOG = Logger.getInstance("MermaidPreviewPanel")
 
 private val BASE64_ENCODER: Base64.Encoder = Base64.getEncoder()
 
-internal class MermaidPreviewPanel(parentDisposable: Disposable) {
+internal class MermaidPreviewPanel(
+    private val project: Project?,
+    parentDisposable: Disposable,
+) {
 
     private val browser: JBCefBrowser = JBCefBrowser()
     private var pageLoaded = false
     private var pendingRender: (() -> Unit)? = null
     private val scrollQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
-    private var scrollCallback: ((Double) -> Unit)? = null
+    private val copySvgQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    private val copyPngQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    private val saveQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
 
     val component: JComponent get() = browser.component
 
     init {
         Disposer.register(parentDisposable, browser)
         Disposer.register(parentDisposable, scrollQuery)
+        Disposer.register(parentDisposable, copySvgQuery)
+        Disposer.register(parentDisposable, copyPngQuery)
+        Disposer.register(parentDisposable, saveQuery)
 
         scrollQuery.addHandler { fractionStr ->
             val fraction = fractionStr.toDoubleOrNull()
@@ -46,6 +60,21 @@ internal class MermaidPreviewPanel(parentDisposable: Disposable) {
             null
         }
 
+        copySvgQuery.addHandler { b64 ->
+            ApplicationManager.getApplication().invokeLater { copySvgToClipboard(b64, project) }
+            null
+        }
+
+        copyPngQuery.addHandler { b64 ->
+            ApplicationManager.getApplication().invokeLater { copyPngToClipboard(b64, project) }
+            null
+        }
+
+        saveQuery.addHandler { jsonData ->
+            ApplicationManager.getApplication().invokeLater { saveDiagramToFile(jsonData, project) }
+            null
+        }
+
         browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
             override fun onLoadEnd(cefBrowser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
                 if (frame?.isMain == true) {
@@ -56,6 +85,7 @@ internal class MermaidPreviewPanel(parentDisposable: Disposable) {
                         if (browser.isDisposed) return@invokeLater
                         pageLoaded = true
                         injectScrollBridge()
+                        injectExportBridges()
                         pendingRender?.invoke()
                         pendingRender = null
                     }
@@ -69,10 +99,24 @@ internal class MermaidPreviewPanel(parentDisposable: Disposable) {
                 errorText: String?,
                 failedUrl: String?,
             ) {
-                LOG.warn("JCEF page load failed: errorCode=$errorCode, errorText=$errorText, url=$failedUrl")
+                if (errorCode == CefLoadHandler.ErrorCode.ERR_ABORTED) return
+                LOG.error("JCEF page load failed: errorCode=$errorCode, errorText=$errorText, url=$failedUrl")
                 ApplicationManager.getApplication().invokeLater {
                     if (browser.isDisposed) return@invokeLater
                     pendingRender = null
+                    val errorMsg = (errorText ?: "Unknown error")
+                        .replace("\\", "\\\\")
+                        .replace("'", "\\'")
+                        .replace("\n", "\\n")
+                        .replace("\r", "")
+                    browser.cefBrowser.executeJavaScript(
+                        """
+                        document.body.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#999';
+                        document.body.textContent = 'Preview failed to load: $errorMsg';
+                        """.trimIndent(),
+                        "mermaid-load-error",
+                        0,
+                    )
                 }
             }
         }, browser.cefBrowser)
@@ -80,15 +124,19 @@ internal class MermaidPreviewPanel(parentDisposable: Disposable) {
         browser.loadHTML(cachedHtml)
     }
 
+    private var scrollCallback: ((Double) -> Unit)? = null
+
     fun render(source: String, isDark: Boolean, forceThemeRefresh: Boolean = false) {
         if (browser.isDisposed) return
         val encoded = BASE64_ENCODER.encodeToString(source.toByteArray(Charsets.UTF_8))
         val themeClass = if (isDark) "dark-theme" else ""
+        val configJson = service<MermaidSettings>().toJsConfigJson()
         val js = """
+            window.__MERMAID_CONFIG=$configJson;
             document.body.className='$themeClass';
             window.renderDiagram('$encoded',$forceThemeRefresh).catch(function(e) {
                 console.error('[MermaidVisualizer] renderDiagram failed: ' + e.message);
-                var c = document.getElementById('mermaid-container');
+                const c = document.getElementById('mermaid-container');
                 if (c) window.__showError(c, 'Render error: ' + e.message, null, document.body.classList.contains('dark-theme'));
             });
         """.trimIndent()
@@ -123,6 +171,19 @@ internal class MermaidPreviewPanel(parentDisposable: Disposable) {
         browser.cefBrowser.executeJavaScript(js, "mermaid-scroll-bridge", 0)
     }
 
+    private fun injectExportBridges() {
+        if (browser.isDisposed) return
+        val copySvgInjection = copySvgQuery.inject("b64")
+        val copyPngInjection = copyPngQuery.inject("b64")
+        val saveInjection = saveQuery.inject("payload")
+        val js = """
+            window.__copySvgBridge = function(b64) { $copySvgInjection };
+            window.__copyPngBridge = function(b64) { $copyPngInjection };
+            window.__saveBridge = function(payload) { $saveInjection };
+        """.trimIndent()
+        browser.cefBrowser.executeJavaScript(js, "mermaid-export-bridge", 0)
+    }
+
     companion object {
         fun isAvailable(): Boolean = JBCefApp.isSupported()
 
@@ -130,18 +191,27 @@ internal class MermaidPreviewPanel(parentDisposable: Disposable) {
 
         private fun buildHtml(): String {
             val mermaidJs = loadResource("web/mermaid.min.js")
+            val zoomJs = loadResource("web/mermaid-zoom.js")
             val standaloneJs = loadResource("web/mermaid-standalone.js")
             val standaloneCss = loadResource("web/mermaid-standalone.css")
+            val shadowCss = loadResource("web/mermaid-shadow.css")
 
-            return buildString(mermaidJs.length + standaloneJs.length + standaloneCss.length + 256) {
+            return buildString(mermaidJs.length + zoomJs.length + standaloneJs.length + standaloneCss.length + shadowCss.length + 512) {
                 append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\">")
+                append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">")
                 append("<style>")
                 append(standaloneCss)
+                append("</style>")
+                append("<style id=\"mermaid-shadow-styles\">")
+                append(shadowCss)
                 append("</style>")
                 append("</head><body>")
                 append("<div id=\"mermaid-container\"></div>")
                 append("<script>")
                 append(mermaidJs)
+                append("</script>")
+                append("<script>")
+                append(zoomJs)
                 append("</script>")
                 append("<script>")
                 append(standaloneJs)

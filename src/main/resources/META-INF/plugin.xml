@@ -10,6 +10,9 @@
         <ul>
             <li>Live rendering of <code>```mermaid</code> code blocks in the Markdown preview</li>
             <li>Dedicated split editor with live preview for <code>.mmd</code> and <code>.mermaid</code> files</li>
+            <li>Zoom (<code>Ctrl+wheel</code>), pan, fit-to-window and 1:1 controls</li>
+            <li>Export diagrams as SVG or PNG — copy to clipboard or save to file</li>
+            <li>Configurable settings (<code>Settings &gt; Tools &gt; Mermaid</code>) — theme, look (classic/hand-drawn), font family, max text size, live reload delay</li>
             <li>Automatic dark/light theme matching with your IDE</li>
             <li>Fully offline — Mermaid.js is bundled, no internet required</li>
             <li>Works in all JetBrains IDEs with Markdown support</li>
@@ -44,6 +47,17 @@
             implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidSyntaxHighlighterFactory"/>
         <colorSettingsPage
             implementation="com.alextdev.mermaidvisualizer.lang.MermaidColorSettingsPage"/>
+        <notificationGroup id="Mermaid Visualizer"
+                           displayType="BALLOON"
+                           key="notification.group.mermaid"/>
+        <applicationService
+            serviceImplementation="com.alextdev.mermaidvisualizer.settings.MermaidSettings"/>
+        <applicationConfigurable
+            parentId="tools"
+            instance="com.alextdev.mermaidvisualizer.settings.MermaidSettingsConfigurable"
+            id="com.alextdev.mermaidvisualizer.settings"
+            key="settings.mermaid.displayName"
+            bundle="messages.MyMessageBundle"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.intellij.markdown">

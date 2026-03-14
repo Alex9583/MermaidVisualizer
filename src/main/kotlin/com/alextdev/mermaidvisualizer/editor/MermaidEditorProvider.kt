@@ -1,12 +1,10 @@
 package com.alextdev.mermaidvisualizer.editor
 
-import com.alextdev.mermaidvisualizer.MyMessageBundle
 import com.alextdev.mermaidvisualizer.lang.MermaidFileType
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.fileEditor.TextEditor
-import com.intellij.openapi.fileEditor.TextEditorWithPreview
 import com.intellij.openapi.fileEditor.TextEditorWithPreviewProvider
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
@@ -29,13 +27,7 @@ internal class MermaidEditorProvider : TextEditorWithPreviewProvider(MermaidPrev
     }
 
     override fun createSplitEditor(firstEditor: TextEditor, secondEditor: FileEditor): FileEditor {
-        (secondEditor as MermaidPreviewFileEditor).attachEditor(firstEditor.editor)
-        return TextEditorWithPreview(
-            firstEditor,
-            secondEditor,
-            MyMessageBundle.message("editor.name"),
-            TextEditorWithPreview.Layout.SHOW_EDITOR_AND_PREVIEW,
-        )
+        return MermaidSplitEditor(firstEditor, secondEditor as MermaidPreviewFileEditor)
     }
 
     override fun getEditorTypeId(): String = EDITOR_TYPE_ID

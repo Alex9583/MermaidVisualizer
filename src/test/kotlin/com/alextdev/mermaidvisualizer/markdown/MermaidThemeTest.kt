@@ -51,8 +51,8 @@ class MermaidThemeTest {
             "mermaid-render.js should define onThemeChange()"
         )
         assertTrue(
-            renderJs.contains("function doThemeChange()") || renderJs.contains("async function doThemeChange()"),
-            "mermaid-render.js should define doThemeChange()"
+            renderJs.contains("async function reInitAndRenderAll("),
+            "mermaid-render.js should define reInitAndRenderAll()"
         )
     }
 
@@ -66,54 +66,44 @@ class MermaidThemeTest {
 
     @Test
     fun `mermaid render js re-initializes mermaid on theme change`() {
+        val fnStart = renderJs.indexOf("async function reInitAndRenderAll(")
+        assertTrue(fnStart >= 0, "reInitAndRenderAll function should exist")
+        val fnBlock = renderJs.substring(fnStart, minOf(fnStart + 500, renderJs.length))
         assertTrue(
-            renderJs.contains("initMermaid(newTheme)") || renderJs.contains("initMermaid("),
-            "doThemeChange should call initMermaid"
-        )
-        // Verify initMermaid is called inside doThemeChange
-        val doThemeChangeStart = renderJs.indexOf("function doThemeChange()")
-            .takeIf { it >= 0 }
-            ?: renderJs.indexOf("async function doThemeChange()")
-        assertTrue(doThemeChangeStart >= 0, "doThemeChange function should exist")
-        val doThemeChangeBlock = renderJs.substring(doThemeChangeStart, minOf(doThemeChangeStart + 500, renderJs.length))
-        assertTrue(
-            doThemeChangeBlock.contains("initMermaid"),
-            "doThemeChange should call initMermaid to re-initialize Mermaid with new theme"
+            fnBlock.contains("initMermaid"),
+            "reInitAndRenderAll should call initMermaid to re-initialize Mermaid"
         )
     }
 
     @Test
-    fun `mermaid render js builds both light and dark shadow styles`() {
+    fun `mermaid render js loads shadow css and toggles dark class`() {
         assertTrue(
-            renderJs.contains("buildShadowStyles(false)"),
-            "mermaid-render.js should build light shadow styles"
+            renderJs.contains("mermaid-shadow.css"),
+            "mermaid-render.js should reference mermaid-shadow.css"
         )
         assertTrue(
-            renderJs.contains("buildShadowStyles(true)"),
-            "mermaid-render.js should build dark shadow styles"
+            renderJs.contains("classList.toggle"),
+            "mermaid-render.js should toggle dark class on host elements"
         )
     }
 
     @Test
     fun `mermaid render js re-renders diagrams on theme change`() {
-        val doThemeChangeStart = renderJs.indexOf("async function doThemeChange()")
-            .takeIf { it >= 0 }
-            ?: renderJs.indexOf("function doThemeChange()")
-        assertTrue(doThemeChangeStart >= 0, "doThemeChange should exist")
+        val fnStart = renderJs.indexOf("async function reInitAndRenderAll(")
+        assertTrue(fnStart >= 0, "reInitAndRenderAll should exist")
 
-        // Find the end of doThemeChange — look for the next top-level function
-        val restOfCode = renderJs.substring(doThemeChangeStart)
+        val restOfCode = renderJs.substring(fnStart)
         assertTrue(
             restOfCode.contains("CLASS_DIAGRAM") || restOfCode.contains("mermaid-diagram"),
-            "doThemeChange should query rendered diagram containers"
+            "reInitAndRenderAll should query rendered diagram containers"
         )
         assertTrue(
             restOfCode.contains("ATTR_PROCESSED") || restOfCode.contains("data-processed"),
-            "doThemeChange should use ATTR_PROCESSED to find rendered diagrams"
+            "reInitAndRenderAll should use ATTR_PROCESSED to find rendered diagrams"
         )
         assertTrue(
             restOfCode.contains("renderSingleDiagram"),
-            "doThemeChange should call renderSingleDiagram to re-render each diagram"
+            "reInitAndRenderAll should call renderSingleDiagram to re-render each diagram"
         )
     }
 

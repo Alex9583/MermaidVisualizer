@@ -1,7 +1,11 @@
 package com.alextdev.mermaidvisualizer.editor
 
 import com.alextdev.mermaidvisualizer.MyMessageBundle
+import com.alextdev.mermaidvisualizer.settings.MERMAID_SETTINGS_TOPIC
+import com.alextdev.mermaidvisualizer.settings.MermaidSettings
+import com.alextdev.mermaidvisualizer.settings.MermaidSettingsListener
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
@@ -29,7 +33,6 @@ import javax.swing.SwingConstants
 
 private val LOG = Logger.getInstance("MermaidPreviewFileEditor")
 
-private const val DEBOUNCE_MS = 300L
 private const val SCROLL_GUARD_RESET_MS = 100L
 
 private enum class ScrollOrigin { NONE, EDITOR, PREVIEW }
@@ -41,6 +44,7 @@ internal class MermaidPreviewFileEditor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.EDT)
     private var debounceJob: Job? = null
+    private var debounceMs = service<MermaidSettings>().state.debounceMs
     private val panel: MermaidPreviewPanel?
     private val document = FileDocumentManager.getInstance().getDocument(file)
     private val mainComponent: JComponent
@@ -54,7 +58,7 @@ internal class MermaidPreviewFileEditor(
         }
 
         if (MermaidPreviewPanel.isAvailable()) {
-            panel = MermaidPreviewPanel(this)
+            panel = MermaidPreviewPanel(project, this)
             mainComponent = panel.component
         } else {
             panel = null
@@ -70,8 +74,14 @@ internal class MermaidPreviewFileEditor(
             }
         }, this)
 
-        ApplicationManager.getApplication().messageBus.connect(this).subscribe(LafManagerListener.TOPIC, LafManagerListener {
+        val connection = ApplicationManager.getApplication().messageBus.connect(this)
+        connection.subscribe(LafManagerListener.TOPIC, LafManagerListener {
             scheduleUpdate(forceThemeRefresh = true)
+        })
+        // Settings changes apply immediately (no debounce) since the user explicitly confirmed via "Apply"
+        connection.subscribe(MERMAID_SETTINGS_TOPIC, MermaidSettingsListener {
+            debounceMs = service<MermaidSettings>().state.debounceMs
+            updatePreview(forceThemeRefresh = true)
         })
 
         // Initial render — no debounce needed on first open
@@ -81,7 +91,7 @@ internal class MermaidPreviewFileEditor(
     private fun scheduleUpdate(forceThemeRefresh: Boolean = false) {
         debounceJob?.cancel()
         debounceJob = scope.launch {
-            delay(DEBOUNCE_MS)
+            delay(debounceMs)
             updatePreview(forceThemeRefresh)
         }
     }
@@ -93,6 +103,7 @@ internal class MermaidPreviewFileEditor(
     }
 
     fun attachEditor(editor: Editor) {
+        check(this.editor == null) { "Editor already attached" }
         this.editor = editor
         editor.scrollingModel.addVisibleAreaListener({ onEditorScroll() }, this)
         panel?.setScrollCallback { fraction -> onPreviewScroll(fraction) }

@@ -1,6 +1,7 @@
 .mermaid-diagram {
     text-align: center;
     padding: 16px 8px;
-    overflow-x: auto;
+    overflow: hidden;
     min-height: 40px;
+    position: relative;
 }
