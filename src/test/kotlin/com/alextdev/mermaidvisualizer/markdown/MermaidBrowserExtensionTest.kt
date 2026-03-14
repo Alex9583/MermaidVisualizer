@@ -20,13 +20,14 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
         }
     }
 
-    fun testScriptsContainsFourUrls() {
+    fun testScriptsContainsFiveUrls() {
         val scripts = extension.scripts
-        assertEquals(4, scripts.size)
+        assertEquals(5, scripts.size)
         assertTrue("First script URL should end with mermaid.min.js", scripts[0].endsWith("mermaid.min.js"))
         assertTrue("Second script URL should end with mermaid-shadow-css-init.js", scripts[1].endsWith("mermaid-shadow-css-init.js"))
-        assertTrue("Third script URL should end with mermaid-zoom.js", scripts[2].endsWith("mermaid-zoom.js"))
-        assertTrue("Fourth script URL should end with mermaid-render.js", scripts[3].endsWith("mermaid-render.js"))
+        assertTrue("Third script URL should end with mermaid-config-init.js", scripts[2].endsWith("mermaid-config-init.js"))
+        assertTrue("Fourth script URL should end with mermaid-zoom.js", scripts[3].endsWith("mermaid-zoom.js"))
+        assertTrue("Fifth script URL should end with mermaid-render.js", scripts[4].endsWith("mermaid-render.js"))
     }
 
     fun testStylesContainsOneUrl() {
@@ -46,6 +47,7 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-preview.css"))
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-shadow.css"))
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-shadow-css-init.js"))
+        assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-config-init.js"))
     }
 
     fun testCanProvideReturnsFalseForUnknownResources() {
@@ -72,6 +74,9 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
 
         val initResource = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid-shadow-css-init.js")
         assertNotNull("mermaid-shadow-css-init.js should be loadable", initResource)
+
+        val configInitResource = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid-config-init.js")
+        assertNotNull("mermaid-config-init.js should be loadable", configInitResource)
     }
 
     fun testLoadResourceReturnsNullForUnknownFiles() {
@@ -135,13 +140,33 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
         assertNotNull(provider)
     }
 
-    fun testExtensionAcceptsNullExportHandler() {
-        val ext = MermaidBrowserExtension(null)
+    fun testExtensionAcceptsNullParams() {
+        val ext = MermaidBrowserExtension(null, null)
         try {
             assertNotNull(ext)
-            assertTrue("Extension should provide scripts even without export handler", ext.scripts.isNotEmpty())
+            assertTrue("Extension should provide scripts without pipe or handler", ext.scripts.isNotEmpty())
         } finally {
             ext.dispose()
         }
+    }
+
+    fun testCanProvideConfigInitJs() {
+        assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-config-init.js"))
+    }
+
+    fun testLoadResourceConfigInitJsReturnsValidJs() {
+        val resource = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid-config-init.js")
+        assertNotNull("mermaid-config-init.js should be loadable", resource)
+        assertEquals("application/javascript", resource!!.type)
+        val content = resource.content.toString(Charsets.UTF_8)
+        assertTrue("Config init script should set __MERMAID_CONFIG", content.contains("__MERMAID_CONFIG"))
+    }
+
+    fun testLoadResourceConfigInitJsIsNotCached() {
+        val first = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid-config-init.js")
+        val second = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid-config-init.js")
+        assertNotNull(first)
+        assertNotNull(second)
+        assertNotSame("Config init script should NOT be cached (always fresh)", first, second)
     }
 }

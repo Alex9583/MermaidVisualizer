@@ -3,7 +3,9 @@ package com.alextdev.mermaidvisualizer.editor
 import com.alextdev.mermaidvisualizer.copyPngToClipboard
 import com.alextdev.mermaidvisualizer.copySvgToClipboard
 import com.alextdev.mermaidvisualizer.saveDiagramToFile
+import com.alextdev.mermaidvisualizer.settings.MermaidSettings
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.components.service
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -128,7 +130,9 @@ internal class MermaidPreviewPanel(
         if (browser.isDisposed) return
         val encoded = BASE64_ENCODER.encodeToString(source.toByteArray(Charsets.UTF_8))
         val themeClass = if (isDark) "dark-theme" else ""
+        val configJson = service<MermaidSettings>().toJsConfigJson()
         val js = """
+            window.__MERMAID_CONFIG=$configJson;
             document.body.className='$themeClass';
             window.renderDiagram('$encoded',$forceThemeRefresh).catch(function(e) {
                 console.error('[MermaidVisualizer] renderDiagram failed: ' + e.message);

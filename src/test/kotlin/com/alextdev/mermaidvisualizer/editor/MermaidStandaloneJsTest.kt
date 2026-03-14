@@ -234,4 +234,24 @@ class MermaidStandaloneJsTest {
     fun `standalone js extractPng uses viewBox for dimensions`() {
         assertTrue(jsContent.contains("viewBox"), "extractPng should use SVG viewBox for natural dimensions")
     }
+
+    // --- Settings config integration tests ---
+
+    @Test
+    fun `standalone js references __MERMAID_CONFIG`() {
+        assertTrue(jsContent.contains("__MERMAID_CONFIG"), "Should read window.__MERMAID_CONFIG for settings")
+    }
+
+    @Test
+    fun `standalone js reads config fields in initMermaid`() {
+        assertTrue(jsContent.contains("cfg.theme"), "initMermaid should read cfg.theme")
+        assertTrue(jsContent.contains("cfg.maxTextSize"), "initMermaid should read cfg.maxTextSize")
+        assertTrue(jsContent.contains("cfg.look"), "initMermaid should read cfg.look")
+        assertTrue(jsContent.contains("cfg.fontFamily"), "initMermaid should read cfg.fontFamily")
+    }
+
+    @Test
+    fun `standalone js falls back when config is absent`() {
+        assertTrue(jsContent.contains("window.__MERMAID_CONFIG || {}"), "Should fallback to empty object when config is absent")
+    }
 }

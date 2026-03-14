@@ -1,7 +1,8 @@
-// NOTE: Shadow DOM, error handling, init logic, export toolbar (icons, extraction, toolbar creation)
-// are intentionally duplicated from mermaid-render.js. The standalone editor loads resources via
-// loadHTML() with inlined scripts, while the Markdown extension serves resources via
-// PreviewStaticServer. Shadow styles are shared via mermaid-shadow.css.
+// NOTE: Shadow DOM, error handling, init logic (including __MERMAID_CONFIG integration),
+// export toolbar (icons, extraction, toolbar creation) are intentionally duplicated from
+// mermaid-render.js. The standalone editor loads resources via loadHTML() with inlined scripts,
+// while the Markdown extension serves resources via PreviewStaticServer.
+// Shadow styles are shared via mermaid-shadow.css.
 // If modifying shared logic, update both files.
 (function () {
     'use strict';
@@ -174,18 +175,22 @@
     let renderCounter = 0;
 
     function initMermaid(theme) {
-        currentTheme = theme;
+        const cfg = window.__MERMAID_CONFIG || {};
+        currentTheme = cfg.theme || theme;
         try {
-            mermaid.initialize({
+            const opts = {
                 startOnLoad: false,
-                maxTextSize: 100000,
+                maxTextSize: cfg.maxTextSize ?? 100000,
                 theme: currentTheme,
+                look: cfg.look || 'classic',
                 securityLevel: 'strict'
-            });
+            };
+            if (cfg.fontFamily) opts.fontFamily = cfg.fontFamily;
+            mermaid.initialize(opts);
         } catch (e) {
             console.error('[MermaidVisualizer] mermaid.initialize failed:', e);
             const container = document.getElementById('mermaid-container');
-            if (container) showError(container, 'Failed to initialize Mermaid: ' + e.message, null, theme === 'dark');
+            if (container) showError(container, 'Failed to initialize Mermaid: ' + e.message, null, currentTheme === 'dark');
         }
     }
 
@@ -197,10 +202,11 @@
         }
 
         const isDark = document.body.classList.contains('dark-theme');
-        const theme = isDark ? 'dark' : 'default';
+        const autoTheme = isDark ? 'dark' : 'default';
+        const effectiveTheme = (window.__MERMAID_CONFIG || {}).theme || autoTheme;
 
-        if (forceThemeRefresh || theme !== currentTheme) {
-            initMermaid(theme);
+        if (forceThemeRefresh || currentTheme !== effectiveTheme) {
+            initMermaid(autoTheme);
         }
 
         let source;

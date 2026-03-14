@@ -132,4 +132,34 @@ class MermaidRenderJsExportTest {
     fun `shadow css has zoom label`() {
         assertTrue(shadowCssContent.contains(".mermaid-zoom-label"), "Shadow CSS should style mermaid-zoom-label")
     }
+
+    // --- Settings config integration tests ---
+
+    @Test
+    fun `render js references __MERMAID_CONFIG`() {
+        assertTrue(jsContent.contains("__MERMAID_CONFIG"), "Should read window.__MERMAID_CONFIG for settings")
+    }
+
+    @Test
+    fun `render js reads config fields in initMermaid`() {
+        assertTrue(jsContent.contains("cfg.theme"), "initMermaid should read cfg.theme")
+        assertTrue(jsContent.contains("cfg.maxTextSize"), "initMermaid should read cfg.maxTextSize")
+        assertTrue(jsContent.contains("cfg.look"), "initMermaid should read cfg.look")
+        assertTrue(jsContent.contains("cfg.fontFamily"), "initMermaid should read cfg.fontFamily")
+    }
+
+    @Test
+    fun `render js falls back when config is absent`() {
+        assertTrue(jsContent.contains("window.__MERMAID_CONFIG || {}"), "Should fallback to empty object when config is absent")
+    }
+
+    @Test
+    fun `render js subscribes to config update via messagePipe`() {
+        assertTrue(jsContent.contains("mermaid/config"), "Should subscribe to mermaid/config tag for live settings refresh")
+    }
+
+    @Test
+    fun `render js has reInitAndRenderAll function`() {
+        assertTrue(jsContent.contains("reInitAndRenderAll"), "Should have reInitAndRenderAll for config and theme changes")
+    }
 }

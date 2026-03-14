@@ -4,7 +4,7 @@
     // Attribute schema:
     // - data-mermaid-processed: set on the original <code> element to skip empty blocks on re-scan
     // - data-processed (ATTR_PROCESSED): set on .mermaid-diagram container after render completes
-    //   (success or error) — used by onThemeChange to find re-renderable diagrams
+    //   (success or error) — used by reInitAndRenderAll to find re-renderable diagrams (theme change and config update)
     // - data-source (ATTR_SOURCE): stores the original Mermaid source text on the container,
     //   used for re-rendering on theme change without needing the original <code> element
     const SELECTOR_UNPROCESSED = 'code.language-mermaid:not([data-mermaid-processed])';
@@ -280,13 +280,21 @@
     let renderCounter = 0;
 
     function initMermaid(theme) {
-        currentTheme = theme;
-        mermaid.initialize({
-            startOnLoad: false,
-            maxTextSize: 100000,
-            theme: currentTheme,
-            securityLevel: 'strict'
-        });
+        const cfg = window.__MERMAID_CONFIG || {};
+        currentTheme = cfg.theme || theme;
+        try {
+            const opts = {
+                startOnLoad: false,
+                maxTextSize: cfg.maxTextSize ?? 100000,
+                theme: currentTheme,
+                look: cfg.look || 'classic',
+                securityLevel: 'strict'
+            };
+            if (cfg.fontFamily) opts.fontFamily = cfg.fontFamily;
+            mermaid.initialize(opts);
+        } catch (e) {
+            console.error('[MermaidVisualizer] mermaid.initialize failed:', e);
+        }
     }
 
     let rendering = false;
@@ -382,26 +390,20 @@
         }).observe(document.body, { childList: true, subtree: true });
     }
 
-    let themeChangeTimer = null;
-
-    function onThemeChange() {
-        clearTimeout(themeChangeTimer);
-        themeChangeTimer = setTimeout(doThemeChange, 100);
-    }
-
-    async function doThemeChange() {
-        const isDark = isDarkTheme();
-        const newTheme = isDark ? 'dark' : 'default';
-        if (newTheme === currentTheme) return;
-
+    async function reInitAndRenderAll(retries) {
         if (rendering) {
-            setTimeout(onThemeChange, 50);
+            if ((retries || 0) >= 10) {
+                console.warn('[MermaidVisualizer] reInitAndRenderAll: abandoned after 10 retries — a render may be stuck');
+                return;
+            }
+            setTimeout(function () { reInitAndRenderAll((retries || 0) + 1); }, 50);
             return;
         }
         rendering = true;
 
         try {
-            initMermaid(newTheme);
+            const isDark = isDarkTheme();
+            initMermaid(isDark ? 'dark' : 'default');
 
             const diagrams = document.querySelectorAll('.' + CLASS_DIAGRAM + '[' + ATTR_PROCESSED + ']');
             for (let i = 0; i < diagrams.length; i++) {
@@ -417,6 +419,17 @@
         } finally {
             rendering = false;
         }
+    }
+
+    let themeChangeTimer = null;
+
+    function onThemeChange() {
+        clearTimeout(themeChangeTimer);
+        themeChangeTimer = setTimeout(function () {
+            const isDark = isDarkTheme();
+            const newTheme = isDark ? 'dark' : 'default';
+            if (newTheme !== currentTheme) reInitAndRenderAll();
+        }, 100);
     }
 
     function setupThemeObserver() {
@@ -473,11 +486,28 @@
         }
 
         setupThemeObserver();
+        setupConfigListener();
         renderDiagrams();
 
         // Delayed theme sync: IntelliJ may apply theme styles after initial page load,
         // so we re-check the theme shortly after bootstrap to catch late changes.
         setTimeout(onThemeChange, 500);
+    }
+
+    function setupConfigListener() {
+        if (!window.__IntelliJTools || !window.__IntelliJTools.messagePipe) {
+            console.debug('[MermaidVisualizer] messagePipe not available — live config updates disabled');
+            return;
+        }
+        window.__IntelliJTools.messagePipe.subscribe('mermaid/config', function (jsonStr) {
+            try {
+                window.__MERMAID_CONFIG = JSON.parse(jsonStr);
+            } catch (e) {
+                console.warn('[MermaidVisualizer] Failed to parse config update', e);
+                return;
+            }
+            reInitAndRenderAll();
+        });
     }
 
     if (document.readyState === 'loading') {
