@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.4.0] - 2026-03-16
+
+- Update Mermaid.js library to v11.13.0 and expand supported diagram types (#6)
+
 ## [1.3.0] - 2026-03-14
 
 - Add export (SVG/PNG), zoom/pan, and configurable rendering settings (#5)
