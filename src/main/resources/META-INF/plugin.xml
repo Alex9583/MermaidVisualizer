@@ -4,7 +4,7 @@
     <vendor url="https://github.com/Alex9583">alextdev</vendor>
 
     <description><![CDATA[
-        <p>Renders <a href="https://mermaid.js.org/">Mermaid</a> diagrams directly in the Markdown preview using the official Mermaid.js library (v11.12.x).</p>
+        <p>Renders <a href="https://mermaid.js.org/">Mermaid</a> diagrams directly in the Markdown preview using the official Mermaid.js library (v11.13.0).</p>
 
         <h2>Features</h2>
         <ul>
@@ -19,7 +19,7 @@
         </ul>
 
         <h2>Supported Diagrams</h2>
-        <p>All 22+ Mermaid diagram types: flowchart, sequence, class, state, ER, gantt, pie, git graph, mindmap, timeline, sankey, and more.</p>
+        <p>All 24+ Mermaid diagram types: flowchart, sequence, class, state, ER, gantt, pie, git graph, mindmap, timeline, sankey, venn, ishikawa, and more.</p>
 
         <h2>Usage</h2>
         <p>Simply write a <code>```mermaid</code> fenced code block in any Markdown file and open the preview.</p>

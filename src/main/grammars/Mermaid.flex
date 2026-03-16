@@ -46,6 +46,8 @@ import static com.intellij.psi.TokenType.*;
         "columns", "block", "space",
         // Architecture
         "group", "service", "junction",
+        // Venn
+        "set", "union",
         // Requirement diagram
         "element", "requirement", "functionalRequirement", "interfaceRequirement",
         "performanceRequirement", "designConstraint",
@@ -120,7 +122,9 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
     | "kanban"
     | "block-beta"
     | "packet-beta"
-    | "architecture-beta"           { yybegin(NORMAL); return DIAGRAM_TYPE; }
+    | "architecture-beta"
+    | "venn-beta"
+    | "ishikawa-beta"              { yybegin(NORMAL); return DIAGRAM_TYPE; }
 
     {HYPHEN_ID}                     { yybegin(NORMAL);
                                       String t = yytext().toString();
@@ -172,6 +176,18 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
     | "-->>-"
     | "->>+"
     | "->>-"
+    | "--|\\"
+    | "--|/"
+    | "--\\\\"
+    | "--//"
+    | "-|\\"
+    | "-|/"
+    | "/|-"
+    | "\\|-"
+    | "-\\\\"
+    | "-//"
+    | "//-"
+    | "\\\\-"
     | "-->>"
     | "-->"
     | "---"

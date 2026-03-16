@@ -12,7 +12,7 @@ IntelliJ plugin that renders [Mermaid](https://mermaid.js.org/) diagrams directl
 - Syntax highlighting for keywords, diagram types, arrows, strings, comments, and more
 - Customizable colors via Settings > Editor > Color Scheme > Mermaid
 - Settings page (Settings > Tools > Mermaid) — theme, look (classic/hand-drawn), font family, max text size, live reload delay
-- Uses the official Mermaid.js library (v11.12.x) — supports all 22+ diagram types
+- Uses the official Mermaid.js library (v11.13.0) — supports all 24+ diagram types
 - Automatic dark/light theme detection and switching
 - Works offline — Mermaid.js is bundled, no CDN required
 

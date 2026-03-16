@@ -82,7 +82,8 @@ class MermaidLexerTest {
         "sankey-beta", "xychart-beta", "quadrantChart",
         "requirementDiagram", "C4Context", "C4Container",
         "C4Component", "C4Dynamic", "C4Deployment", "zenuml",
-        "kanban", "block-beta", "packet-beta", "architecture-beta"
+        "kanban", "block-beta", "packet-beta", "architecture-beta",
+        "venn-beta", "ishikawa-beta"
     ])
     fun testDiagramTypeAtLineStart(diagramType: String) {
         val tokens = nonWhitespaceTokens(diagramType)
@@ -351,6 +352,8 @@ class MermaidLexerTest {
         "columns", "block", "space",
         // Architecture
         "group", "service", "junction",
+        // Venn
+        "set", "union",
         // Requirement
         "element", "requirement", "functionalRequirement", "interfaceRequirement",
         "performanceRequirement", "designConstraint",
@@ -419,6 +422,44 @@ class MermaidLexerTest {
         val stringTokens = tokens.filter { it.first == MermaidTokenTypes.STRING_SINGLE }
         assertTrue(stringTokens.isNotEmpty())
         assertFalse(stringTokens.any { it.second.contains("foo") })
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = [
+        "-|\\", "-|/", "/|-", "\\|-",
+        "-\\\\", "-//", "//-", "\\\\-",
+        "--|\\", "--|/", "--\\\\", "--//"
+    ])
+    fun testHalfArrowPatterns(arrow: String) {
+        val tokens = nonWhitespaceTokens("A $arrow B")
+        val arrowToken = tokens.find { it.first == MermaidTokenTypes.ARROW }
+        assertNotNull(arrowToken, "Arrow token for '$arrow' not found")
+        assertEquals(arrow, arrowToken!!.second)
+    }
+
+    @Test
+    fun testVennDiagramSnippet() {
+        val input = """
+            venn-beta
+              set A["Alpha"]
+              union A,B["AB"]
+        """.trimIndent()
+        val tokens = nonWhitespaceTokens(input)
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals("venn-beta", tokens[0].second)
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "set" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "union" })
+    }
+
+    @Test
+    fun testIshikawaDiagramSnippet() {
+        val input = """
+            ishikawa-beta
+              Blurry Photo
+        """.trimIndent()
+        val tokens = nonWhitespaceTokens(input)
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals("ishikawa-beta", tokens[0].second)
     }
 
     @Test

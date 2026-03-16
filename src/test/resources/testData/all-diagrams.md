@@ -1,6 +1,6 @@
 # All Mermaid Diagram Types
 
-Test file covering all 22+ Mermaid diagram types for manual and automated verification.
+Test file covering all 24+ Mermaid diagram types for manual and automated verification.
 
 ## 1. Flowchart
 
@@ -282,6 +282,39 @@ kanban
         task3["Task 3"]
     column3["Done"]
         task4["Task 4"]
+```
+
+## 23. Venn (beta)
+
+```mermaid
+venn-beta
+  title Three overlapping sets
+  set A["Alpha"]
+  set B["Beta"]
+  set C
+  union A,B["AB"]
+  union B,C["BC"]
+  union A,B,C["ABC"]
+  style A,B fill:skyblue
+```
+
+## 24. Ishikawa (beta)
+
+```mermaid
+ishikawa-beta
+  Blurry Photo
+  Process
+    Out of focus
+    Shutter speed too slow
+  User
+    Shaky hands
+  Equipment
+    LENS
+      Dirty lens
+    SENSOR
+      Damaged sensor
+  Environment
+    Too dark
 ```
 
 ---
