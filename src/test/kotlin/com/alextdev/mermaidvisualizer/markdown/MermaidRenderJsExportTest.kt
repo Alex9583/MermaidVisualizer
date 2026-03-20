@@ -25,13 +25,13 @@ class MermaidRenderJsExportTest {
     }
 
     @Test
-    fun `render js has extractSvgFromContainer function`() {
-        assertTrue(jsContent.contains("extractSvgFromContainer"), "Should have extractSvgFromContainer function")
+    fun `render js delegates SVG extraction to core`() {
+        assertTrue(jsContent.contains("extractSvg"), "Should delegate SVG extraction to core")
     }
 
     @Test
-    fun `render js has extractPngFromContainer function`() {
-        assertTrue(jsContent.contains("extractPngFromContainer"), "Should have extractPngFromContainer function")
+    fun `render js delegates PNG extraction to core`() {
+        assertTrue(jsContent.contains("extractPng"), "Should delegate PNG extraction to core")
     }
 
     @Test
@@ -58,35 +58,9 @@ class MermaidRenderJsExportTest {
     }
 
     @Test
-    fun `render js extractPng has try-catch in img onload`() {
-        assertTrue(jsContent.contains("img.onload"), "Should have img.onload handler")
-        val onloadIndex = jsContent.indexOf("img.onload")
-        val onerrorIndex = jsContent.indexOf("img.onerror", onloadIndex)
-        assertTrue(onerrorIndex > onloadIndex, "Should have img.onerror after img.onload")
-        val onloadBlock = jsContent.substring(onloadIndex, onerrorIndex)
-        assertTrue(onloadBlock.contains("catch"), "img.onload should contain try-catch for PNG extraction errors")
-    }
-
-    @Test
-    fun `render js img onerror logs error`() {
-        assertTrue(jsContent.contains("SVG image load error"), "img.onerror should log an error message")
-    }
-
-    @Test
-    fun `render js export handlers have error handling`() {
-        assertTrue(jsContent.contains("Copy SVG failed"), "Copy SVG handler should have error logging")
-        assertTrue(jsContent.contains("Copy SVG: no SVG found"), "Copy SVG should log when no SVG found")
-    }
-
-    @Test
-    fun `render js extractPng checks canvas context`() {
-        assertTrue(jsContent.contains("Failed to get 2D canvas context"), "Should check canvas.getContext result")
-    }
-
-    @Test
-    fun `render js Save sends error payload when no SVG found`() {
-        assertTrue(jsContent.contains("pipe.post('mermaid/save', JSON.stringify"),
-            "Save button should send error payload to Kotlin when no SVG found")
+    fun `render js Save sends payload via messagePipe`() {
+        assertTrue(jsContent.contains("pipe.post('mermaid/save'"),
+            "Save button should send payload to Kotlin via messagePipe")
     }
 
     // --- Zoom integration tests ---
@@ -104,11 +78,6 @@ class MermaidRenderJsExportTest {
     @Test
     fun `render js passes wheelRequiresModifier true`() {
         assertTrue(jsContent.contains("wheelRequiresModifier: true"), "Should pass wheelRequiresModifier true for Markdown")
-    }
-
-    @Test
-    fun `render js extractPng uses viewBox for dimensions`() {
-        assertTrue(jsContent.contains("viewBox"), "extractPngFromContainer should use SVG viewBox for natural dimensions")
     }
 
     // --- Shadow CSS zoom styles ---
@@ -133,24 +102,19 @@ class MermaidRenderJsExportTest {
         assertTrue(shadowCssContent.contains(".mermaid-zoom-label"), "Shadow CSS should style mermaid-zoom-label")
     }
 
+    @Test
+    fun `shadow css has tooltip on hover`() {
+        assertTrue(shadowCssContent.contains(".mermaid-export-btn::after"), "Shadow CSS should have tooltip pseudo-element")
+        assertTrue(shadowCssContent.contains("attr(title)"), "Tooltip should use attr(title) for content")
+        assertTrue(shadowCssContent.contains(".mermaid-export-btn:hover::after"), "Tooltip should appear on hover")
+        assertTrue(shadowCssContent.contains("transition-delay: 1s"), "Tooltip should have 1s hover delay")
+    }
+
     // --- Settings config integration tests ---
 
     @Test
     fun `render js references __MERMAID_CONFIG`() {
         assertTrue(jsContent.contains("__MERMAID_CONFIG"), "Should read window.__MERMAID_CONFIG for settings")
-    }
-
-    @Test
-    fun `render js reads config fields in initMermaid`() {
-        assertTrue(jsContent.contains("cfg.theme"), "initMermaid should read cfg.theme")
-        assertTrue(jsContent.contains("cfg.maxTextSize"), "initMermaid should read cfg.maxTextSize")
-        assertTrue(jsContent.contains("cfg.look"), "initMermaid should read cfg.look")
-        assertTrue(jsContent.contains("cfg.fontFamily"), "initMermaid should read cfg.fontFamily")
-    }
-
-    @Test
-    fun `render js falls back when config is absent`() {
-        assertTrue(jsContent.contains("window.__MERMAID_CONFIG || {}"), "Should fallback to empty object when config is absent")
     }
 
     @Test

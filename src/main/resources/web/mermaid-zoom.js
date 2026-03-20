@@ -4,7 +4,7 @@
 (function () {
     'use strict';
 
-    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const core = window.__mermaidCore;
     const MIN_SCALE = 0.1;
     const MAX_SCALE = 5.0;
     const ZOOM_FACTOR = 1.25;
@@ -15,16 +15,18 @@
     // --- SVG natural dimensions ---
 
     function getSvgNaturalSize(svg) {
-        // Prefer rendered dimensions (respects CSS constraints like max-width: 100%)
-        const rect = svg.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-            return { width: rect.width, height: rect.height };
+        // Use CSS layout dimensions — not affected by CSS transforms on ancestors.
+        const cw = svg.clientWidth;
+        const ch = svg.clientHeight;
+        if (cw > 0 && ch > 0) {
+            return { width: cw, height: ch };
         }
-        // Fallback: viewBox or explicit attributes
+        // Fallback: viewBox
         const vb = svg.viewBox ? svg.viewBox.baseVal : null;
         if (vb && vb.width > 0 && vb.height > 0) {
             return { width: vb.width, height: vb.height };
         }
+        // Fallback: explicit width/height attributes
         const w = parseFloat(svg.getAttribute('width'));
         const h = parseFloat(svg.getAttribute('height'));
         if (w > 0 && h > 0) {
@@ -99,12 +101,28 @@
 
     function fitToWindow(state) {
         const svg = state.viewportEl.querySelector('svg');
-        if (svg) {
+        if (state.fixedFitScale) {
+            state.fitScale = state.fixedFitScale;
+        } else if (svg) {
             state.fitScale = computeFitScale(state.viewportEl, svg, state.fitMode);
         }
         state.scale = state.fitScale;
-        state.panX = 0;
-        state.panY = 0;
+        // Center the diagram within the viewport.
+        // Cancel any CSS centering offset (e.g. text-align: center inherited into shadow DOM)
+        // since transform-origin: 0 0 doesn't account for layout offsets.
+        if (state.fixedFitScale || !svg) {
+            state.panX = 0;
+            state.panY = 0;
+        } else {
+            const size = getSvgNaturalSize(svg);
+            const vw = state.viewportEl.clientWidth;
+            const vh = state.viewportEl.clientHeight;
+            const cssOffsetX = state.contentEl.offsetLeft;
+            const scaledW = size.width * state.scale;
+            const scaledH = size.height * state.scale;
+            state.panX = -cssOffsetX + Math.max(0, (vw - scaledW) / 2);
+            state.panY = state.fitMode === 'width' ? 0 : Math.max(0, (vh - scaledH) / 2);
+        }
         state.mode = 'fit';
         applyTransform(state);
     }
@@ -215,29 +233,11 @@
 
     // --- Toolbar button creation ---
 
-    function createSvgIcon(paths) {
-        const svg = document.createElementNS(SVG_NS, 'svg');
-        svg.setAttribute('width', '14');
-        svg.setAttribute('height', '14');
-        svg.setAttribute('viewBox', '0 0 16 16');
-        svg.setAttribute('fill', 'none');
-        svg.setAttribute('stroke', 'currentColor');
-        svg.setAttribute('stroke-width', '1.5');
-        svg.setAttribute('stroke-linecap', 'round');
-        svg.setAttribute('stroke-linejoin', 'round');
-        for (let i = 0; i < paths.length; i++) {
-            const path = document.createElementNS(SVG_NS, 'path');
-            path.setAttribute('d', paths[i]);
-            svg.appendChild(path);
-        }
-        return svg;
-    }
-
     function createZoomButton(iconPaths, title, onClick) {
         const btn = document.createElement('button');
         btn.className = 'mermaid-export-btn';
         btn.setAttribute('title', title);
-        btn.appendChild(createSvgIcon(iconPaths));
+        btn.appendChild(core.createSvgIcon(iconPaths));
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
             e.preventDefault();
@@ -266,10 +266,9 @@
         const divider = document.createElement('span');
         divider.className = 'mermaid-toolbar-divider';
 
-        // Insert zoom controls before existing export buttons
+        // Insert zoom controls before existing export buttons — order: 1:1, -, label, +, fit, divider
         const firstChild = toolbarEl.firstChild;
-        // Each item is inserted before the same stable reference, producing forward order: fit, +, label, -, 1:1, divider
-        const items = [fitBtn, zoomInBtn, label, zoomOutBtn, actualBtn, divider];
+        const items = [actualBtn, zoomOutBtn, label, zoomInBtn, fitBtn, divider];
         for (let i = 0; i < items.length; i++) {
             toolbarEl.insertBefore(items[i], firstChild);
         }
@@ -329,6 +328,7 @@
         const enableKeyboard = (options && options.enableKeyboard) || false;
         const constrainSvg = !(options && options.constrainSvg === false);
         const scrollSyncCallback = (options && options.scrollSyncCallback) || null;
+        const fixedFitScale = (options && typeof options.fixedFitScale === 'number') ? options.fixedFitScale : null;
 
         const wrapped = wrapInZoomViewport(shadowRoot);
         if (!wrapped) return;
@@ -338,21 +338,21 @@
         }
 
         const svg = wrapped.viewport.querySelector('svg');
-        const initialFitScale = svg ? computeFitScale(wrapped.viewport, svg, fitMode) : 1;
-        const initialScale = fitMode === 'fit' ? initialFitScale : 1;
+        const initialFitScale = fixedFitScale || (svg ? computeFitScale(wrapped.viewport, svg, fitMode) : 1);
 
         const state = {
-            scale: initialScale,
+            scale: 1,
             fitScale: initialFitScale,
             panX: 0,
             panY: 0,
-            mode: fitMode === 'fit' ? 'fit' : 'manual',
+            mode: 'manual',
             isPanning: false,
             panStartX: 0,
             panStartY: 0,
             viewportEl: wrapped.viewport,
             contentEl: wrapped.content,
             fitMode: fitMode,
+            fixedFitScale: fixedFitScale,
             wheelRequiresModifier: wheelRequiresModifier,
             zoomLabel: null,
             resizeObserver: null,
