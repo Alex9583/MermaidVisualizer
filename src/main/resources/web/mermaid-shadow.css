@@ -60,6 +60,7 @@ svg {
 }
 
 .mermaid-export-btn {
+    position: relative;
     width: 28px;
     height: 28px;
     border-radius: 4px;
@@ -75,6 +76,33 @@ svg {
 
 .mermaid-export-btn:hover {
     background: var(--mermaid-btn-hover-bg);
+}
+
+/* CSS tooltip — appears after 1s hover, disappears immediately on leave */
+.mermaid-export-btn::after {
+    content: attr(title);
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 4px;
+    padding: 3px 7px;
+    font-size: 11px;
+    white-space: nowrap;
+    border-radius: 3px;
+    background: var(--mermaid-btn-bg);
+    color: var(--mermaid-btn-color);
+    border: 1px solid var(--mermaid-btn-border);
+    pointer-events: none;
+    z-index: 20;
+    opacity: 0;
+    transition: opacity 0.15s;
+    transition-delay: 0s;
+}
+
+.mermaid-export-btn:hover::after {
+    opacity: 1;
+    transition-delay: 1s;
 }
 
 .mermaid-export-btn svg {

@@ -19,7 +19,16 @@ class MermaidResourceLoadingTest {
         assertNotNull(stream, "web/mermaid-render.js should be on the classpath")
         val content = stream!!.use { it.readBytes().toString(Charsets.UTF_8) }
         assertTrue(content.contains("renderDiagrams"), "mermaid-render.js should contain 'renderDiagrams'")
-        assertTrue(content.contains("mermaid.initialize"), "mermaid-render.js should contain 'mermaid.initialize'")
+        assertTrue(content.contains("initMermaid"), "mermaid-render.js should contain 'initMermaid'")
+    }
+
+    @Test
+    fun `mermaid core js is loadable and contains expected symbols`() {
+        val stream = javaClass.classLoader.getResourceAsStream("web/mermaid-core.js")
+        assertNotNull(stream, "web/mermaid-core.js should be on the classpath")
+        val content = stream!!.use { it.readBytes().toString(Charsets.UTF_8) }
+        assertTrue(content.contains("__mermaidCore"), "mermaid-core.js should contain '__mermaidCore'")
+        assertTrue(content.contains("mermaid.initialize"), "mermaid-core.js should contain 'mermaid.initialize'")
     }
 
     @Test

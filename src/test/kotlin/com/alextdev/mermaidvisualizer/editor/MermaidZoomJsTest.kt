@@ -92,8 +92,20 @@ class MermaidZoomJsTest {
     }
 
     @Test
+    fun `zoom js uses clientWidth for transform-stable dimensions`() {
+        assertTrue(jsContent.contains("svg.clientWidth"), "Should use clientWidth for dimensions unaffected by CSS transforms")
+        assertTrue(jsContent.contains("svg.clientHeight"), "Should use clientHeight for dimensions unaffected by CSS transforms")
+    }
+
+    @Test
     fun `zoom js reads SVG viewBox for natural dimensions`() {
-        assertTrue(jsContent.contains("viewBox"), "Should read SVG viewBox for natural dimensions")
+        assertTrue(jsContent.contains("viewBox"), "Should read SVG viewBox as fallback for natural dimensions")
+    }
+
+    @Test
+    fun `zoom js uses SVG natural dimensions for fit`() {
+        assertTrue(jsContent.contains("getAttribute('width')"), "Should read SVG natural width from attributes")
+        assertTrue(jsContent.contains("getAttribute('height')"), "Should read SVG natural height from attributes")
     }
 
     @Test
@@ -112,4 +124,5 @@ class MermaidZoomJsTest {
     fun `zoom js uses passive wheel listener when modifier required`() {
         assertTrue(jsContent.contains("passive: wheelRequiresModifier"), "Should use passive wheel listener when wheelRequiresModifier is true")
     }
+
 }

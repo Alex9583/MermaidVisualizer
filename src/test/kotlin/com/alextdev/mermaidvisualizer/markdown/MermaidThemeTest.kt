@@ -68,7 +68,7 @@ class MermaidThemeTest {
     fun `mermaid render js re-initializes mermaid on theme change`() {
         val fnStart = renderJs.indexOf("async function reInitAndRenderAll(")
         assertTrue(fnStart >= 0, "reInitAndRenderAll function should exist")
-        val fnBlock = renderJs.substring(fnStart, minOf(fnStart + 500, renderJs.length))
+        val fnBlock = renderJs.substring(fnStart, minOf(fnStart + 600, renderJs.length))
         assertTrue(
             fnBlock.contains("initMermaid"),
             "reInitAndRenderAll should call initMermaid to re-initialize Mermaid"
@@ -76,14 +76,10 @@ class MermaidThemeTest {
     }
 
     @Test
-    fun `mermaid render js loads shadow css and toggles dark class`() {
+    fun `mermaid render js loads shadow css`() {
         assertTrue(
             renderJs.contains("mermaid-shadow.css"),
             "mermaid-render.js should reference mermaid-shadow.css"
-        )
-        assertTrue(
-            renderJs.contains("classList.toggle"),
-            "mermaid-render.js should toggle dark class on host elements"
         )
     }
 
