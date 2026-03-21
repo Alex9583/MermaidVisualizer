@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.4.1] - 2026-03-21
+
+- Refactor: Extract and modularize mermaid-core functionality, fix fit-to-window button (#7)
+
 ## [1.4.0] - 2026-03-16
 
 - Update Mermaid.js library to v11.13.0 and expand supported diagram types (#6)
