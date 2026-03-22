@@ -35,6 +35,9 @@ import com.intellij.psi.tree.IElementType
 @JvmField val MERMAID_IDENTIFIER_KEY: TextAttributesKey =
     TextAttributesKey.createTextAttributesKey("MERMAID_IDENTIFIER", DefaultLanguageHighlighterColors.INSTANCE_FIELD)
 
+@JvmField val MERMAID_PUNCTUATION_KEY: TextAttributesKey =
+    TextAttributesKey.createTextAttributesKey("MERMAID_PUNCTUATION", DefaultLanguageHighlighterColors.OPERATION_SIGN)
+
 @JvmField val MERMAID_BAD_CHAR_KEY: TextAttributesKey =
     TextAttributesKey.createTextAttributesKey("MERMAID_BAD_CHARACTER", HighlighterColors.BAD_CHARACTER)
 
@@ -47,6 +50,7 @@ private val ARROW_KEYS = arrayOf(MERMAID_ARROW_KEY)
 private val NUMBER_KEYS = arrayOf(MERMAID_NUMBER_KEY)
 private val BRACES_KEYS = arrayOf(MERMAID_BRACES_KEY)
 private val IDENTIFIER_KEYS = arrayOf(MERMAID_IDENTIFIER_KEY)
+private val PUNCTUATION_KEYS = arrayOf(MERMAID_PUNCTUATION_KEY)
 private val BAD_CHAR_KEYS = arrayOf(MERMAID_BAD_CHAR_KEY)
 private val EMPTY_KEYS = emptyArray<TextAttributesKey>()
 
@@ -58,11 +62,13 @@ class MermaidSyntaxHighlighter : SyntaxHighlighterBase() {
             MermaidTokenTypes.COMMENT -> COMMENT_KEYS
             MermaidTokenTypes.DIRECTIVE -> DIRECTIVE_KEYS
             MermaidTokenTypes.DIAGRAM_TYPE -> DIAGRAM_TYPE_KEYS
-            MermaidTokenTypes.KEYWORD -> KEYWORD_KEYS
+            MermaidTokenTypes.KEYWORD, MermaidTokenTypes.END_KW -> KEYWORD_KEYS
             MermaidTokenTypes.STRING_DOUBLE, MermaidTokenTypes.STRING_SINGLE -> STRING_KEYS
             MermaidTokenTypes.ARROW -> ARROW_KEYS
             MermaidTokenTypes.NUMBER -> NUMBER_KEYS
             MermaidTokenTypes.BRACKET_OPEN, MermaidTokenTypes.BRACKET_CLOSE -> BRACES_KEYS
+            MermaidTokenTypes.COLON, MermaidTokenTypes.SEMICOLON, MermaidTokenTypes.COMMA -> PUNCTUATION_KEYS
+            MermaidTokenTypes.PIPE -> BRACES_KEYS
             MermaidTokenTypes.IDENTIFIER -> IDENTIFIER_KEYS
             TokenType.BAD_CHARACTER -> BAD_CHAR_KEYS
             else -> EMPTY_KEYS

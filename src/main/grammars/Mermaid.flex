@@ -19,8 +19,8 @@ import static com.intellij.psi.TokenType.*;
         "subgraph", "end", "direction", "style", "linkStyle", "classDef", "class",
         "click", "callback", "interpolate",
         // Sequence diagram
-        "participant", "actor", "loop", "alt", "else", "opt", "par", "and",
-        "critical", "break", "rect", "note", "over", "left", "right", "of",
+        "participant", "actor", "loop", "alt", "else", "opt", "par",
+        "critical", "break", "rect", "note", "over", "left", "right",
         "activate", "deactivate", "autonumber", "link", "links",
         "create", "destroy", "box",
         // Class diagram
@@ -83,6 +83,7 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
 %state STRING_D
 %state STRING_S
 %state DIRECTIVE_STATE
+%state FRONTMATTER
 
 %%
 
@@ -94,6 +95,8 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
 
     "%%"[^\r\n{][^\r\n]*           { return COMMENT; }
     "%%"                            { return COMMENT; }
+
+    "end"                           { yybegin(NORMAL); return END_KW; }
 
     "flowchart"
     | "graph"                       { yybegin(AFTER_FLOWCHART); return DIAGRAM_TYPE; }
@@ -126,6 +129,8 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
     | "venn-beta"
     | "ishikawa-beta"              { yybegin(NORMAL); return DIAGRAM_TYPE; }
 
+    "---"                           { yybegin(FRONTMATTER); return DIRECTIVE; }
+
     {HYPHEN_ID}                     { yybegin(NORMAL);
                                       String t = yytext().toString();
                                       if (isKeyword(t)) return KEYWORD;
@@ -152,6 +157,15 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
 
     \"                              { yybegin(STRING_D); return STRING_DOUBLE; }
     \'                              { yybegin(STRING_S); return STRING_SINGLE; }
+
+    // Invisible link
+    "~~~"                           { return ARROW; }
+
+    // Variable-length long arrows (3+ dashes/equals — not matched by fixed patterns)
+    "---" "-"* ">>"                 { return ARROW; }
+    "---" "-"* ">"                  { return ARROW; }
+    "<--" "-"+ ">"                  { return ARROW; }
+    "===" "="* ">"                  { return ARROW; }
 
     "||--o{"
     | "||--|{"
@@ -208,6 +222,7 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
     ":"                             { return COLON; }
     "|"                             { return PIPE; }
     ";"                             { return SEMICOLON; }
+    ","                             { return COMMA; }
 
     {NUMBER}                        { return NUMBER; }
 
@@ -215,7 +230,7 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
                                       if (isKeyword(t)) return KEYWORD;
                                       return IDENTIFIER; }
 
-    [^ \t\r\n\"\'\[\]\{\}\(\)\:\;\|]+  { return IDENTIFIER; }
+    [^ \t\r\n\"\'\[\]\{\}\(\)\:\;\|\,]+  { return IDENTIFIER; }
 }
 
 <STRING_D> {
@@ -233,5 +248,12 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
 <DIRECTIVE_STATE> {
     "}%%"                           { yybegin(YYINITIAL); return DIRECTIVE; }
     [^}]+ | "}"                     { return DIRECTIVE; }
+    <<EOF>>                         { yybegin(YYINITIAL); return DIRECTIVE; }
+}
+
+<FRONTMATTER> {
+    "---"                           { yybegin(YYINITIAL); return DIRECTIVE; }
+    [^\r\n]+                        { return DIRECTIVE; }
+    {NEWLINE}                       { return WHITE_SPACE; }
     <<EOF>>                         { yybegin(YYINITIAL); return DIRECTIVE; }
 }

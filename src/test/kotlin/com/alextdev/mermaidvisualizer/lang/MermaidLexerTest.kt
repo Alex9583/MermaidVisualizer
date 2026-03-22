@@ -22,8 +22,6 @@ class MermaidLexerTest {
         return tokens
     }
 
-    private fun tokenTypes(input: String): List<IElementType> = tokenize(input).map { it.first }
-
     private fun nonWhitespaceTokens(input: String): List<Pair<IElementType, String>> =
         tokenize(input).filter { it.first != TokenType.WHITE_SPACE }
 
@@ -218,11 +216,47 @@ class MermaidLexerTest {
     }
 
     @Test
-    fun testKeywordEnd() {
+    fun testEndKeywordAtLineStart() {
+        val tokens = nonWhitespaceTokens("end")
+        val endToken = tokens.find { it.second == "end" }
+        assertNotNull(endToken)
+        assertEquals(MermaidTokenTypes.END_KW, endToken!!.first)
+    }
+
+    @Test
+    fun testEndKeywordAfterIndent() {
         val tokens = nonWhitespaceTokens("    end")
         val endToken = tokens.find { it.second == "end" }
         assertNotNull(endToken)
-        assertEquals(MermaidTokenTypes.KEYWORD, endToken!!.first)
+        assertEquals(MermaidTokenTypes.END_KW, endToken!!.first)
+    }
+
+    @Test
+    fun testEndKeywordMidLine() {
+        val tokens = nonWhitespaceTokens("flowchart LR\n    A end B")
+        val endToken = tokens.filter { it.second == "end" }
+        assertEquals(1, endToken.size)
+        assertEquals(MermaidTokenTypes.KEYWORD, endToken[0].first,
+            "'end' mid-line in NORMAL state should be KEYWORD, not END_KW")
+    }
+
+    @Test
+    fun testEndpointNotEndKw() {
+        val tokens = nonWhitespaceTokens("endpoint")
+        val token = tokens.find { it.second == "endpoint" }
+        assertNotNull(token)
+        assertNotEquals(MermaidTokenTypes.END_KW, token!!.first,
+            "'endpoint' should not be END_KW")
+    }
+
+    @Test
+    fun testFlowchartWithSubgraphEnd() {
+        val input = "flowchart LR\n    subgraph test\n        A --> B\n    end"
+        val tokens = nonWhitespaceTokens(input)
+        val endToken = tokens.last()
+        assertEquals("end", endToken.second)
+        assertEquals(MermaidTokenTypes.END_KW, endToken.first,
+            "'end' as first token on line (YYINITIAL state) should be END_KW")
     }
 
     @Test
@@ -324,11 +358,11 @@ class MermaidLexerTest {
     @ParameterizedTest
     @ValueSource(strings = [
         // Flowchart + general styling/interaction
-        "subgraph", "end", "direction", "style", "linkStyle", "classDef", "class",
+        "subgraph", "direction", "style", "linkStyle", "classDef", "class",
         "click", "callback", "interpolate",
         // Sequence
-        "participant", "actor", "loop", "alt", "else", "opt", "par", "and",
-        "critical", "break", "rect", "note", "over", "left", "right", "of",
+        "participant", "actor", "loop", "alt", "else", "opt", "par",
+        "critical", "break", "rect", "note", "over", "left", "right",
         "activate", "deactivate", "autonumber", "link", "links",
         "create", "destroy", "box",
         // Class
@@ -460,6 +494,174 @@ class MermaidLexerTest {
         val tokens = nonWhitespaceTokens(input)
         assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
         assertEquals("ishikawa-beta", tokens[0].second)
+    }
+
+    @Test
+    fun testInvisibleLinkArrow() {
+        val tokens = nonWhitespaceTokens("A ~~~ B")
+        val arrowToken = tokens.find { it.first == MermaidTokenTypes.ARROW }
+        assertNotNull(arrowToken, "~~~ should be recognized as ARROW")
+        assertEquals("~~~", arrowToken!!.second)
+    }
+
+    @Test
+    fun testLongArrow() {
+        val tokens = nonWhitespaceTokens("A ---> B")
+        val arrowToken = tokens.find { it.first == MermaidTokenTypes.ARROW }
+        assertNotNull(arrowToken, "---> should be recognized as ARROW")
+        assertEquals("--->", arrowToken!!.second)
+    }
+
+    @Test
+    fun testVeryLongArrow() {
+        val tokens = nonWhitespaceTokens("A -----> B")
+        val arrowToken = tokens.find { it.first == MermaidTokenTypes.ARROW }
+        assertNotNull(arrowToken, "-----> should be recognized as ARROW")
+        assertEquals("----->", arrowToken!!.second)
+    }
+
+    @Test
+    fun testLongThickArrow() {
+        val tokens = nonWhitespaceTokens("A ===> B")
+        val arrowToken = tokens.find { it.first == MermaidTokenTypes.ARROW }
+        assertNotNull(arrowToken, "===> should be recognized as ARROW")
+        assertEquals("===>", arrowToken!!.second)
+    }
+
+    @Test
+    fun testBidirectionalLongArrow() {
+        val tokens = nonWhitespaceTokens("A <---> B")
+        val arrowToken = tokens.find { it.first == MermaidTokenTypes.ARROW }
+        assertNotNull(arrowToken, "<---> should be recognized as ARROW")
+        assertEquals("<--->", arrowToken!!.second)
+    }
+
+    @Test
+    fun testLongArrowDoubleHead() {
+        val tokens = nonWhitespaceTokens("A --->> B")
+        val arrowToken = tokens.find { it.first == MermaidTokenTypes.ARROW }
+        assertNotNull(arrowToken, "--->> should be recognized as ARROW")
+        assertEquals("--->>", arrowToken!!.second)
+    }
+
+    @Test
+    fun testStateDiagramSnippet() {
+        val input = """
+            stateDiagram-v2
+                state Moving {
+                    slow --> fast
+                }
+        """.trimIndent()
+        val tokens = nonWhitespaceTokens(input)
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals("stateDiagram-v2", tokens[0].second)
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "state" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.BRACKET_OPEN && it.second == "{" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.BRACKET_CLOSE && it.second == "}" })
+    }
+
+    @Test
+    fun testFrontmatter() {
+        val input = "---\ntitle: My Diagram\n---\nflowchart LR"
+        val tokens = nonWhitespaceTokens(input)
+        // First --- is DIRECTIVE (opening frontmatter)
+        assertEquals(MermaidTokenTypes.DIRECTIVE, tokens[0].first)
+        assertEquals("---", tokens[0].second)
+        // Frontmatter content is DIRECTIVE
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.DIRECTIVE && it.second == "title: My Diagram" })
+        // Closing --- is DIRECTIVE
+        val closingDash = tokens.filter { it.first == MermaidTokenTypes.DIRECTIVE && it.second == "---" }
+        assertEquals(2, closingDash.size, "Both --- delimiters should be DIRECTIVE")
+        // Diagram type follows frontmatter
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.DIAGRAM_TYPE && it.second == "flowchart" })
+    }
+
+    @Test
+    fun testFrontmatterUnclosed() {
+        val input = "---\ntitle: foo"
+        val tokens = nonWhitespaceTokens(input)
+        assertTrue(tokens.all { it.first == MermaidTokenTypes.DIRECTIVE },
+            "Unclosed frontmatter: all content should be DIRECTIVE")
+    }
+
+    @Test
+    fun testArrowWithoutSpacesIsKnownLimitation() {
+        // Arrows without surrounding spaces: the catch-all IDENTIFIER in NORMAL state captures
+        // the arrow + trailing identifier as one token (JFlex longest-match wins over arrow patterns).
+        // This is a known limitation. Spaces around arrows are needed for correct tokenization.
+        val tokens = nonWhitespaceTokens("Bob-->>Alice")
+        // "Bob" matched by HYPHEN_ID in YYINITIAL, "-->>Alice" by catch-all in NORMAL
+        assertEquals(2, tokens.size)
+        assertEquals(MermaidTokenTypes.IDENTIFIER, tokens[0].first)
+        assertEquals("Bob", tokens[0].second)
+        assertEquals(MermaidTokenTypes.IDENTIFIER, tokens[1].first)
+        assertEquals("-->>Alice", tokens[1].second)
+        // The arrow is NOT separately recognized — compare with spaced version
+        assertFalse(tokens.any { it.first == MermaidTokenTypes.ARROW })
+    }
+
+    @Test
+    fun testArrowWithSpacesWorks() {
+        val tokens = nonWhitespaceTokens("Bob -->> Alice")
+        assertEquals(3, tokens.size)
+        assertEquals(MermaidTokenTypes.IDENTIFIER, tokens[0].first)
+        assertEquals(MermaidTokenTypes.ARROW, tokens[1].first)
+        assertEquals("-->>", tokens[1].second)
+        assertEquals(MermaidTokenTypes.IDENTIFIER, tokens[2].first)
+    }
+
+    @Test
+    fun testOfIsIdentifier() {
+        val tokens = nonWhitespaceTokens("    of")
+        val token = tokens.find { it.second == "of" }
+        assertNotNull(token)
+        assertEquals(MermaidTokenTypes.IDENTIFIER, token!!.first,
+            "'of' should be IDENTIFIER to avoid false keyword highlighting in text content")
+    }
+
+    @Test
+    fun testAndIsIdentifier() {
+        val tokens = nonWhitespaceTokens("    and")
+        val token = tokens.find { it.second == "and" }
+        assertNotNull(token)
+        assertEquals(MermaidTokenTypes.IDENTIFIER, token!!.first,
+            "'and' should be IDENTIFIER to avoid false keyword highlighting in text content")
+    }
+
+    @Test
+    fun testOfInTitleNotKeyword() {
+        val tokens = nonWhitespaceTokens("title History of Social Media")
+        val ofToken = tokens.find { it.second == "of" }
+        assertNotNull(ofToken)
+        assertEquals(MermaidTokenTypes.IDENTIFIER, ofToken!!.first)
+    }
+
+    @Test
+    fun testAndInTitleNotKeyword() {
+        val tokens = nonWhitespaceTokens("title Reach and engagement")
+        val andToken = tokens.find { it.second == "and" }
+        assertNotNull(andToken)
+        assertEquals(MermaidTokenTypes.IDENTIFIER, andToken!!.first)
+    }
+
+    @Test
+    fun testCommaToken() {
+        val tokens = nonWhitespaceTokens("5000, 6000")
+        assertEquals(MermaidTokenTypes.NUMBER, tokens[0].first)
+        assertEquals("5000", tokens[0].second)
+        assertEquals(MermaidTokenTypes.COMMA, tokens[1].first)
+        assertEquals(",", tokens[1].second)
+        assertEquals(MermaidTokenTypes.NUMBER, tokens[2].first)
+        assertEquals("6000", tokens[2].second)
+    }
+
+    @Test
+    fun testCommaInXyChartData() {
+        val tokens = nonWhitespaceTokens("bar [5000, 6000, 7500]")
+        val numberTokens = tokens.filter { it.first == MermaidTokenTypes.NUMBER }
+        assertEquals(3, numberTokens.size, "All numbers should be recognized individually")
+        val commaTokens = tokens.filter { it.first == MermaidTokenTypes.COMMA }
+        assertEquals(2, commaTokens.size)
     }
 
     @Test

@@ -22,7 +22,9 @@ object MermaidTokenTypes {
     @JvmField val COLON = MermaidTokenType("COLON")
     @JvmField val PIPE = MermaidTokenType("PIPE")
     @JvmField val SEMICOLON = MermaidTokenType("SEMICOLON")
+    @JvmField val COMMA = MermaidTokenType("COMMA")
     @JvmField val IDENTIFIER = MermaidTokenType("IDENTIFIER")
+    @JvmField val END_KW = MermaidTokenType("END_KW")
 }
 
 object MermaidTokenSets {

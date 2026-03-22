@@ -3,7 +3,7 @@ import java.net.URI
 plugins {
     id("org.jetbrains.kotlin.jvm") version "2.1.20"
     id("org.jetbrains.intellij.platform") version "2.10.2"
-    id("org.jetbrains.grammarkit") version "2022.3.2.2"
+    id("org.jetbrains.grammarkit") version "2023.3.0.3"
 }
 
 group = "com.alextdev"
@@ -66,10 +66,19 @@ tasks.test {
     useJUnitPlatform()
 }
 
+tasks.register<org.jetbrains.grammarkit.tasks.GenerateParserTask>("generateMermaidParser") {
+    sourceFile.set(file("src/main/grammars/Mermaid.bnf"))
+    targetRootOutputDir.set(file("src/main/gen"))
+    pathToParser.set("com/alextdev/mermaidvisualizer/lang/parser/MermaidParser.java")
+    pathToPsiRoot.set("com/alextdev/mermaidvisualizer/lang/psi")
+    purgeOldFiles.set(true)
+}
+
 tasks.register<org.jetbrains.grammarkit.tasks.GenerateLexerTask>("generateMermaidLexer") {
+    dependsOn("generateMermaidParser")
     sourceFile.set(file("src/main/grammars/Mermaid.flex"))
     targetOutputDir.set(file("src/main/gen/com/alextdev/mermaidvisualizer/lang"))
-    purgeOldFiles.set(true)
+    purgeOldFiles.set(false)
 }
 
 tasks.named("compileKotlin") {

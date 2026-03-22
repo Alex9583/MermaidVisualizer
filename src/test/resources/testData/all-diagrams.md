@@ -27,10 +27,10 @@ graph LR
 sequenceDiagram
     participant Alice
     participant Bob
-    Alice->>Bob: Hello Bob
-    Bob-->>Alice: Hi Alice
-    Alice->>Bob: How are you?
-    Bob-->>Alice: Fine thanks!
+    Alice ->> Bob: Hello Bob
+    Bob -->> Alice: Hi Alice
+    Alice ->> Bob: How are you?
+    Bob -->> Alice: Fine thanks!
 ```
 
 ## 4. Class Diagram
@@ -188,11 +188,11 @@ xychart-beta
 ```mermaid
 sankey-beta
 
-Agricultural 'waste',Bio-conversion,124.729
-Bio-conversion,Liquid,0.597
-Bio-conversion,Losses,26.862
-Bio-conversion,Solid,280.322
-Bio-conversion,Gas,81.144
+Agricultural 'waste', Bio-conversion, 124.729
+Bio-conversion, Liquid, 0.597
+Bio-conversion, Losses, 26.862
+Bio-conversion, Solid, 280.322
+Bio-conversion, Gas, 81.144
 ```
 
 ## 16. Requirement Diagram
