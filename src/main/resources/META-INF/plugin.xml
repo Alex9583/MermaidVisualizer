@@ -52,6 +52,9 @@
                            key="notification.group.mermaid"/>
         <applicationService
             serviceImplementation="com.alextdev.mermaidvisualizer.settings.MermaidSettings"/>
+        <completion.contributor
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.completion.MermaidCompletionContributor"/>
         <applicationConfigurable
             parentId="tools"
             instance="com.alextdev.mermaidvisualizer.settings.MermaidSettingsConfigurable"
