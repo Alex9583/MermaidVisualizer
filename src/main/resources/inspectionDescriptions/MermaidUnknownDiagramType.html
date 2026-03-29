@@ -1,0 +1,17 @@
+<html>
+<body>
+Reports diagram type keywords that do not match any known Mermaid diagram type.
+<p>
+Mermaid supports specific diagram type keywords such as <code>flowchart</code>,
+<code>sequenceDiagram</code>, <code>classDiagram</code>, <code>gantt</code>, etc.
+An unrecognized keyword will cause Mermaid.js to fail rendering.
+</p>
+<!-- tooltip end -->
+<p>Example of an incorrect diagram type:</p>
+<pre><code>
+flowchar LR
+    A --> B
+</code></pre>
+<p>The quick fix suggests the closest matching diagram type keyword.</p>
+</body>
+</html>

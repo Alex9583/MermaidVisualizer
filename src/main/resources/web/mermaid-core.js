@@ -263,6 +263,22 @@
         return toolbar;
     }
 
+    // --- Error info parsing ---
+
+    function parseErrorInfo(err) {
+        const message = err.message || String(err);
+        const info = { status: 'error', message: message, line: null, column: null };
+        const lineMatch = message.match(/on line (\d+)/i) || message.match(/line (\d+)/i);
+        if (lineMatch) {
+            info.line = parseInt(lineMatch[1], 10);
+        }
+        const colMatch = message.match(/column (\d+)/i);
+        if (colMatch) {
+            info.column = parseInt(colMatch[1], 10);
+        }
+        return info;
+    }
+
     // --- Public API ---
 
     window.__mermaidCore = {
@@ -274,6 +290,7 @@
         extractSvg: extractSvg,
         extractPng: extractPng,
         createExportToolbar: createExportToolbar,
+        parseErrorInfo: parseErrorInfo,
         getCurrentTheme: function () { return currentTheme; },
         nextRenderId: function () { return 'mermaid-render-' + (renderCounter++); },
         SVG_NS: SVG_NS,

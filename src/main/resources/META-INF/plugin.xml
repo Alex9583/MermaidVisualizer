@@ -61,6 +61,39 @@
             id="com.alextdev.mermaidvisualizer.settings"
             key="settings.mermaid.displayName"
             bundle="messages.MyMessageBundle"/>
+        <localInspection
+            language="Mermaid"
+            groupKey="inspection.group.mermaid"
+            bundle="messages.MyMessageBundle"
+            shortName="MermaidUnknownDiagramType"
+            key="inspection.unknown.diagram.type.display"
+            level="ERROR"
+            enabledByDefault="true"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.inspection.MermaidUnknownDiagramTypeInspection"/>
+        <localInspection
+            language="Mermaid"
+            groupKey="inspection.group.mermaid"
+            bundle="messages.MyMessageBundle"
+            shortName="MermaidInvalidArrow"
+            key="inspection.invalid.arrow.display"
+            level="WARNING"
+            enabledByDefault="true"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.inspection.MermaidInvalidArrowInspection"/>
+        <localInspection
+            language="Mermaid"
+            groupKey="inspection.group.mermaid"
+            bundle="messages.MyMessageBundle"
+            shortName="MermaidUnusedNode"
+            key="inspection.unused.node.display"
+            level="WARNING"
+            enabledByDefault="true"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.inspection.MermaidUnusedNodeInspection"/>
+        <externalAnnotator
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidRenderExternalAnnotator"/>
+        <annotator
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidDiagramTypeAnnotator"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.intellij.markdown">

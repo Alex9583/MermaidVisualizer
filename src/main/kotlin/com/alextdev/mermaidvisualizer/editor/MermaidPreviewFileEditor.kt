@@ -4,9 +4,13 @@ import com.alextdev.mermaidvisualizer.MyMessageBundle
 import com.alextdev.mermaidvisualizer.settings.MERMAID_SETTINGS_TOPIC
 import com.alextdev.mermaidvisualizer.settings.MermaidSettings
 import com.alextdev.mermaidvisualizer.settings.MermaidSettingsListener
+import com.google.gson.JsonParseException
+import com.google.gson.JsonParser
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.application.EDT
+import kotlin.time.Duration.Companion.milliseconds
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.EditorColorsManager
@@ -19,6 +23,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ide.ui.LafManagerListener
+import com.intellij.psi.PsiManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -51,6 +56,7 @@ internal class MermaidPreviewFileEditor(
     private var editor: Editor? = null
     private var scrollOrigin = ScrollOrigin.NONE
     private var scrollGuardResetJob: Job? = null
+    private var renderGeneration = 0L
 
     init {
         if (document == null) {
@@ -60,6 +66,7 @@ internal class MermaidPreviewFileEditor(
         if (MermaidPreviewPanel.isAvailable()) {
             panel = MermaidPreviewPanel(project, this)
             mainComponent = panel.component
+            panel.setErrorCallback { handleRenderResult(it) }
         } else {
             panel = null
             mainComponent = JLabel(
@@ -91,7 +98,7 @@ internal class MermaidPreviewFileEditor(
     private fun scheduleUpdate(forceThemeRefresh: Boolean = false) {
         debounceJob?.cancel()
         debounceJob = scope.launch {
-            delay(debounceMs)
+            delay(debounceMs.milliseconds)
             updatePreview(forceThemeRefresh)
         }
     }
@@ -99,7 +106,54 @@ internal class MermaidPreviewFileEditor(
     private fun updatePreview(forceThemeRefresh: Boolean = false) {
         val source = document?.text ?: return
         val isDark = EditorColorsManager.getInstance().isDarkEditor
-        panel?.render(source, isDark, forceThemeRefresh)
+        val generation = ++renderGeneration
+
+        // Clear stale render error immediately so the annotation disappears
+        // as soon as a new render starts, not when it finishes
+        if (file.getMermaidRenderError() != null) {
+            file.setMermaidRenderError(null)
+            restartAnalyzer()
+        }
+
+        panel?.render(source, isDark, forceThemeRefresh, generation)
+    }
+
+    private fun handleRenderResult(jsonData: String) {
+        val json = try {
+            JsonParser.parseString(jsonData).asJsonObject
+        } catch (e: JsonParseException) {
+            LOG.warn("Failed to parse render result JSON", e)
+            return
+        } catch (e: IllegalStateException) {
+            LOG.warn("Render result is not a JSON object", e)
+            return
+        }
+
+        val generation = json.get("gen")?.asLong
+        if (generation == null) {
+            LOG.warn("Render result missing 'gen' field")
+            return
+        }
+        if (generation != renderGeneration) return // stale result
+
+        val status = json.get("status")?.asString
+        if (status == "ok") {
+            file.setMermaidRenderError(null)
+        } else {
+            val message = json.get("message")?.asString
+                ?: MyMessageBundle.message("render.error.unknown")
+            val line = try { json.get("line")?.takeIf { !it.isJsonNull }?.asInt?.takeIf { it >= 1 } } catch (_: NumberFormatException) { null }
+            val column = try { json.get("column")?.takeIf { !it.isJsonNull }?.asInt?.takeIf { it >= 1 } } catch (_: NumberFormatException) { null }
+            file.setMermaidRenderError(MermaidRenderError(message, line, column))
+        }
+
+        restartAnalyzer()
+    }
+
+    private fun restartAnalyzer() {
+        val psiFile = PsiManager.getInstance(project).findFile(file) ?: return
+        @Suppress("DEPRECATION")
+        DaemonCodeAnalyzer.getInstance(project).restart(psiFile)
     }
 
     fun attachEditor(editor: Editor) {
@@ -141,7 +195,7 @@ internal class MermaidPreviewFileEditor(
     private fun scheduleScrollGuardReset() {
         scrollGuardResetJob?.cancel()
         scrollGuardResetJob = scope.launch {
-            delay(SCROLL_GUARD_RESET_MS)
+            delay(SCROLL_GUARD_RESET_MS.milliseconds)
             scrollOrigin = ScrollOrigin.NONE
         }
     }
@@ -166,6 +220,7 @@ internal class MermaidPreviewFileEditor(
 
     override fun dispose() {
         scope.cancel()
+        file.setMermaidRenderError(null)
         LOG.debug("Disposing MermaidPreviewFileEditor for ${file.path}")
     }
 }

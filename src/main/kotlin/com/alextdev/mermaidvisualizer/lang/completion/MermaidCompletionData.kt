@@ -198,13 +198,65 @@ object MermaidCompletionData {
         MermaidDiagramKind.SEQUENCE -> SEQUENCE_BLOCK_KEYWORDS
         MermaidDiagramKind.CLASS -> CLASS_BLOCK_KEYWORDS
         MermaidDiagramKind.BLOCK -> setOf("block")
-        else -> emptySet()
+        MermaidDiagramKind.ER,
+        MermaidDiagramKind.STATE,
+        MermaidDiagramKind.STATE_V1,
+        MermaidDiagramKind.GANTT,
+        MermaidDiagramKind.PIE,
+        MermaidDiagramKind.GIT_GRAPH,
+        MermaidDiagramKind.MINDMAP,
+        MermaidDiagramKind.TIMELINE,
+        MermaidDiagramKind.JOURNEY,
+        MermaidDiagramKind.SANKEY,
+        MermaidDiagramKind.XY_CHART,
+        MermaidDiagramKind.QUADRANT,
+        MermaidDiagramKind.REQUIREMENT,
+        MermaidDiagramKind.C4_CONTEXT,
+        MermaidDiagramKind.C4_CONTAINER,
+        MermaidDiagramKind.C4_COMPONENT,
+        MermaidDiagramKind.C4_DYNAMIC,
+        MermaidDiagramKind.C4_DEPLOYMENT,
+        MermaidDiagramKind.ZENUML,
+        MermaidDiagramKind.KANBAN,
+        MermaidDiagramKind.PACKET,
+        MermaidDiagramKind.ARCHITECTURE,
+        MermaidDiagramKind.VENN,
+        MermaidDiagramKind.ISHIKAWA,
+        -> emptySet()
     }
 
     /** Divider keywords valid inside blocks for a given diagram kind. */
     fun dividerKeywordsFor(kind: MermaidDiagramKind): Set<String> = when (kind) {
         MermaidDiagramKind.SEQUENCE -> setOf("else", "and")
-        else -> emptySet()
+        MermaidDiagramKind.FLOWCHART,
+        MermaidDiagramKind.GRAPH,
+        MermaidDiagramKind.CLASS,
+        MermaidDiagramKind.ER,
+        MermaidDiagramKind.STATE,
+        MermaidDiagramKind.STATE_V1,
+        MermaidDiagramKind.GANTT,
+        MermaidDiagramKind.PIE,
+        MermaidDiagramKind.GIT_GRAPH,
+        MermaidDiagramKind.MINDMAP,
+        MermaidDiagramKind.TIMELINE,
+        MermaidDiagramKind.JOURNEY,
+        MermaidDiagramKind.SANKEY,
+        MermaidDiagramKind.XY_CHART,
+        MermaidDiagramKind.QUADRANT,
+        MermaidDiagramKind.REQUIREMENT,
+        MermaidDiagramKind.C4_CONTEXT,
+        MermaidDiagramKind.C4_CONTAINER,
+        MermaidDiagramKind.C4_COMPONENT,
+        MermaidDiagramKind.C4_DYNAMIC,
+        MermaidDiagramKind.C4_DEPLOYMENT,
+        MermaidDiagramKind.ZENUML,
+        MermaidDiagramKind.KANBAN,
+        MermaidDiagramKind.BLOCK,
+        MermaidDiagramKind.PACKET,
+        MermaidDiagramKind.ARCHITECTURE,
+        MermaidDiagramKind.VENN,
+        MermaidDiagramKind.ISHIKAWA,
+        -> emptySet()
     }
 
     // ── Arrow sets per diagram type ────────────────────────────────────
@@ -261,15 +313,40 @@ object MermaidCompletionData {
     )
 
     private val ARROWS_BY_KIND: Map<MermaidDiagramKind, List<ArrowEntry>> by lazy {
-        buildMap {
-            put(MermaidDiagramKind.FLOWCHART, FLOWCHART_ARROWS)
-            put(MermaidDiagramKind.GRAPH, FLOWCHART_ARROWS)
-            put(MermaidDiagramKind.SEQUENCE, SEQUENCE_ARROWS)
-            put(MermaidDiagramKind.CLASS, CLASS_ARROWS)
-            put(MermaidDiagramKind.ER, ER_ARROWS)
-            put(MermaidDiagramKind.STATE, STATE_ARROWS)
-            put(MermaidDiagramKind.STATE_V1, STATE_ARROWS)
-        }
+        val map = mapOf(
+            MermaidDiagramKind.FLOWCHART to FLOWCHART_ARROWS,
+            MermaidDiagramKind.GRAPH to FLOWCHART_ARROWS,
+            MermaidDiagramKind.SEQUENCE to SEQUENCE_ARROWS,
+            MermaidDiagramKind.CLASS to CLASS_ARROWS,
+            MermaidDiagramKind.ER to ER_ARROWS,
+            MermaidDiagramKind.STATE to STATE_ARROWS,
+            MermaidDiagramKind.STATE_V1 to STATE_ARROWS,
+            MermaidDiagramKind.GANTT to emptyList(),
+            MermaidDiagramKind.PIE to emptyList(),
+            MermaidDiagramKind.GIT_GRAPH to emptyList(),
+            MermaidDiagramKind.MINDMAP to emptyList(),
+            MermaidDiagramKind.TIMELINE to emptyList(),
+            MermaidDiagramKind.JOURNEY to emptyList(),
+            MermaidDiagramKind.SANKEY to emptyList(),
+            MermaidDiagramKind.XY_CHART to emptyList(),
+            MermaidDiagramKind.QUADRANT to emptyList(),
+            MermaidDiagramKind.REQUIREMENT to emptyList(),
+            MermaidDiagramKind.C4_CONTEXT to emptyList(),
+            MermaidDiagramKind.C4_CONTAINER to emptyList(),
+            MermaidDiagramKind.C4_COMPONENT to emptyList(),
+            MermaidDiagramKind.C4_DYNAMIC to emptyList(),
+            MermaidDiagramKind.C4_DEPLOYMENT to emptyList(),
+            MermaidDiagramKind.ZENUML to emptyList(),
+            MermaidDiagramKind.KANBAN to emptyList(),
+            MermaidDiagramKind.BLOCK to emptyList(),
+            MermaidDiagramKind.PACKET to emptyList(),
+            MermaidDiagramKind.ARCHITECTURE to emptyList(),
+            MermaidDiagramKind.VENN to emptyList(),
+            MermaidDiagramKind.ISHIKAWA to emptyList(),
+        )
+        val missing = MermaidDiagramKind.entries.toSet() - map.keys
+        check(missing.isEmpty()) { "ARROWS_BY_KIND missing entries for: $missing" }
+        map
     }
 
     /** Returns arrows valid for a given diagram kind, or empty list if none. */

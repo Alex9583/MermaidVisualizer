@@ -327,4 +327,26 @@ class MermaidCompletionContributorTest : BasePlatformTestCase() {
         assertTrue("Expected TB after direction keyword", completions.contains("TB"))
         assertTrue("Expected BT after direction keyword", completions.contains("BT"))
     }
+
+    // ── Direction insertion correctness ────────────────────────────────
+
+    fun testDirectionInsertionWithTypedPrefix() {
+        myFixture.configureByText("test.mmd", "flowchart L<caret>")
+        val items = myFixture.completeBasic()
+        assertNotNull("Expected multiple matches for 'L' prefix", items)
+        val lrItem = items.first { it.lookupString == "LR" }
+        myFixture.lookup.currentItem = lrItem
+        myFixture.type('\n')
+        assertEquals("flowchart LR", myFixture.editor.document.text.trimEnd())
+    }
+
+    fun testDirectionInsertionFromPopupWithPrefix() {
+        myFixture.configureByText("test.mmd", "flowchart T<caret>")
+        val items = myFixture.completeBasic()
+        assertNotNull("Expected multiple matches for 'T' prefix", items)
+        val tdItem = items.first { it.lookupString == "TD" }
+        myFixture.lookup.currentItem = tdItem
+        myFixture.type('\n')
+        assertEquals("flowchart TD", myFixture.editor.document.text.trimEnd())
+    }
 }

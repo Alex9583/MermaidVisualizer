@@ -1,0 +1,21 @@
+<html>
+<body>
+Reports node declarations that are never used in messages or relationships.
+<p>
+In sequence diagrams, a <code>participant</code> or <code>actor</code> declaration
+that never appears in any message is likely unnecessary.
+In class diagrams, a <code>class</code> declaration never used in any relationship
+may indicate dead code.
+</p>
+<!-- tooltip end -->
+<p>Example of an unused participant:</p>
+<pre><code>
+sequenceDiagram
+    participant Alice
+    participant Bob
+    Alice ->> Bob: Hello
+</code></pre>
+<p>Both participants are used. If <code>participant Charlie</code> were added without
+any message involving Charlie, it would be flagged.</p>
+</body>
+</html>

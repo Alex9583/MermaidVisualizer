@@ -111,6 +111,7 @@ class MermaidKeywordProvider : CompletionProvider<CompletionParameters>() {
             val element = LookupElementBuilder.create(dir.code)
                 .withTypeText(directionTypeText)
                 .withTailText(" ${MyMessageBundle.message(dir.descriptionKey)}", true)
+                .withInsertHandler(DirectionInsertHandler)
             result.addElement(PrioritizedLookupElement.withPriority(element, 90.0))
         }
     }
@@ -135,5 +136,24 @@ private object BlockKeywordInsertHandler : InsertHandler<LookupElement> {
         document.insertString(offset, template)
         editor.caretModel.moveToOffset(offset + 1 + bodyIndent.length + 1)
         context.commitDocument()
+    }
+}
+
+private object DirectionInsertHandler : InsertHandler<LookupElement> {
+    override fun handleInsert(context: InsertionContext, item: LookupElement) {
+        val document = context.document
+        val tail = context.tailOffset
+        val text = document.charsSequence
+        // Clean up any remaining identifier characters after the insertion.
+        // This handles the case where IDENTIFIER_END_OFFSET wasn't properly
+        // updated during live typing, causing INSERT instead of REPLACE.
+        var end = tail
+        while (end < text.length) {
+            val c = text[end]
+            if (c.isLetterOrDigit() || c == '_') end++ else break
+        }
+        if (end > tail) {
+            document.deleteString(tail, end)
+        }
     }
 }
