@@ -1,20 +1,23 @@
 package com.alextdev.mermaidvisualizer.lang.inspection.fix
 
 import com.alextdev.mermaidvisualizer.MyMessageBundle
-import com.alextdev.mermaidvisualizer.lang.psi.MermaidStatement
 import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemDescriptor
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.util.PsiTreeUtil
 
 /**
  * Quick fix that removes an unused declaration statement (e.g., `participant X` or `class X`).
+ *
+ * Deletes the entire line containing [declarationStartOffset], because declaration keywords
+ * and the node name always reside on the same line, and the Grammar-Kit parser creates
+ * a single MermaidStatement per diagram body.
  */
 class MermaidRemoveDeclarationFix(
     private val keyword: String,
     private val nodeName: String,
+    private val declarationStartOffset: Int,
 ) : LocalQuickFix {
 
     override fun getFamilyName(): String =
@@ -25,21 +28,17 @@ class MermaidRemoveDeclarationFix(
 
     override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
         val element = descriptor.psiElement ?: return
-        val stmt = PsiTreeUtil.getParentOfType(element, MermaidStatement::class.java, false)
-            ?: return
-        val file = stmt.containingFile ?: return
+        val file = element.containingFile ?: return
         val document = PsiDocumentManager.getInstance(project).getDocument(file) ?: return
+
+        val line = document.getLineNumber(declarationStartOffset)
+        val lineStart = document.getLineStartOffset(line)
+        val lineEnd = document.getLineEndOffset(line)
+
+        // Include the trailing newline if present, or the leading newline for the last line
         val fileText = document.text
-
-        // Delete the full line containing this statement (including leading whitespace and trailing newline)
-        val stmtStart = stmt.textRange.startOffset
-        val stmtEnd = stmt.textRange.endOffset
-        val lineStart = fileText.lastIndexOf('\n', stmtStart - 1).let { if (it < 0) 0 else it }
-        val lineEnd = fileText.indexOf('\n', stmtEnd).let { if (it < 0) fileText.length else it + 1 }
-
-        // Avoid deleting beyond the file if this is the last line
-        val deleteStart = if (lineStart == 0 && fileText.getOrNull(0) != '\n') 0 else lineStart
-        val deleteEnd = lineEnd.coerceAtMost(fileText.length)
+        val deleteEnd = if (lineEnd < fileText.length && fileText[lineEnd] == '\n') lineEnd + 1 else lineEnd
+        val deleteStart = if (deleteEnd == lineEnd && lineStart > 0 && fileText[lineStart - 1] == '\n') lineStart - 1 else lineStart
 
         WriteCommandAction.runWriteCommandAction(project) {
             document.deleteString(deleteStart, deleteEnd)

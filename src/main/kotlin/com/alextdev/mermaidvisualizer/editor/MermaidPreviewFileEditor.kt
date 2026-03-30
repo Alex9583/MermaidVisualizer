@@ -12,6 +12,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.application.EDT
 import kotlin.time.Duration.Companion.milliseconds
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.event.DocumentEvent
@@ -119,6 +120,16 @@ internal class MermaidPreviewFileEditor(
     }
 
     private fun handleRenderResult(jsonData: String) {
+        try {
+            handleRenderResultInternal(jsonData)
+        } catch (e: ProcessCanceledException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("Failed to process render result: $jsonData", e)
+        }
+    }
+
+    private fun handleRenderResultInternal(jsonData: String) {
         val json = try {
             JsonParser.parseString(jsonData).asJsonObject
         } catch (e: JsonParseException) {
@@ -142,8 +153,8 @@ internal class MermaidPreviewFileEditor(
         } else {
             val message = json.get("message")?.asString
                 ?: MyMessageBundle.message("render.error.unknown")
-            val line = try { json.get("line")?.takeIf { !it.isJsonNull }?.asInt?.takeIf { it >= 1 } } catch (_: NumberFormatException) { null }
-            val column = try { json.get("column")?.takeIf { !it.isJsonNull }?.asInt?.takeIf { it >= 1 } } catch (_: NumberFormatException) { null }
+            val line = try { json.get("line")?.takeIf { !it.isJsonNull }?.asInt?.takeIf { it >= 1 } } catch (_: Exception) { null }
+            val column = try { json.get("column")?.takeIf { !it.isJsonNull }?.asInt?.takeIf { it >= 1 } } catch (_: Exception) { null }
             file.setMermaidRenderError(MermaidRenderError(message, line, column))
         }
 

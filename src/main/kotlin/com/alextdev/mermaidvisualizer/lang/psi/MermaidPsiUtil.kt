@@ -14,7 +14,7 @@ object MermaidPsiUtil {
 
     // ── Data classes ────────────────────────────────────────────────────
 
-    data class DeclaredNode(val name: String, val element: PsiElement, val keyword: String)
+    data class DeclaredNode(val name: String, val element: PsiElement, val keyword: String, val declarationStart: PsiElement)
     data class UsedNode(val name: String, val element: PsiElement)
 
     // ── Diagram navigation ──────────────────────────────────────────────
@@ -52,6 +52,15 @@ object MermaidPsiUtil {
         return sib
     }
 
+    /** Returns the next non-whitespace sibling, or null. */
+    fun nextSignificantSibling(element: PsiElement): PsiElement? {
+        var sib = element.nextSibling
+        while (sib != null && sib.node.elementType == TokenType.WHITE_SPACE) {
+            sib = sib.nextSibling
+        }
+        return sib
+    }
+
     /**
      * Returns true if the element is inside a bracket group `[...]`, `(...)`, or `{...}`.
      * Labels like `Start` in `A[Start]` are inside brackets and are NOT node names.
@@ -64,7 +73,7 @@ object MermaidPsiUtil {
             if (type == MermaidTokenTypes.BRACKET_CLOSE) {
                 depth++
             } else if (type == MermaidTokenTypes.BRACKET_OPEN) {
-                if (depth == 0) return true
+                if (depth <= 0) return true
                 depth--
             }
             sib = sib.prevSibling
@@ -153,7 +162,10 @@ object MermaidPsiUtil {
             // Matches "participant Alice", "actor Bob", "class Animal",
             // and also "create participant Alice" (prev is still "participant")
             if (prev.node.elementType == MermaidTokenTypes.KEYWORD && prev.text in declKeywords) {
-                declared.add(DeclaredNode(name, nodeRef, prev.text))
+                // Check for optional 'create' prefix (sequence diagrams)
+                val prefix = prevSignificantSibling(prev)
+                val start = if (prefix != null && prefix.node.elementType == MermaidTokenTypes.KEYWORD && prefix.text == "create") prefix else prev
+                declared.add(DeclaredNode(name, nodeRef, prev.text, start))
             }
         }
 

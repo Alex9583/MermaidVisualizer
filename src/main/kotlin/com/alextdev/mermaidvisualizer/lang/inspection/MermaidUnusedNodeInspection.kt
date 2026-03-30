@@ -5,6 +5,7 @@ import com.alextdev.mermaidvisualizer.lang.completion.MermaidDiagramKind
 import com.alextdev.mermaidvisualizer.lang.inspection.fix.MermaidRemoveDeclarationFix
 import com.alextdev.mermaidvisualizer.lang.psi.MermaidClassDiagram
 import com.alextdev.mermaidvisualizer.lang.MermaidFile
+import com.alextdev.mermaidvisualizer.lang.MermaidTokenTypes
 import com.alextdev.mermaidvisualizer.lang.psi.MermaidPsiUtil
 import com.alextdev.mermaidvisualizer.lang.psi.MermaidSequenceDiagram
 import com.intellij.codeInspection.InspectionManager
@@ -53,11 +54,18 @@ class MermaidUnusedNodeInspection : LocalInspectionTool() {
 
         for (node in declared) {
             if (node.name !in usedNames) {
+                // Skip fix for class declarations with a body (e.g., "class Animal { ... }")
+                // — line deletion would leave the body orphaned
+                val hasBody = MermaidPsiUtil.nextSignificantSibling(node.element)
+                    ?.let { it.node.elementType == MermaidTokenTypes.BRACKET_OPEN } == true
+                val fix = if (hasBody) null
+                    else MermaidRemoveDeclarationFix(node.keyword, node.name, node.declarationStart.textRange.startOffset)
+
                 problems.add(
                     manager.createProblemDescriptor(
                         node.element,
                         MyMessageBundle.message("inspection.unused.node", node.name, node.keyword),
-                        MermaidRemoveDeclarationFix(node.keyword, node.name),
+                        fix,
                         ProblemHighlightType.LIKE_UNUSED_SYMBOL,
                         isOnTheFly,
                     )

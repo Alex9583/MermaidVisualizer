@@ -131,4 +131,27 @@ class MermaidInvalidArrowInspectionTest : BasePlatformTestCase() {
         assertTrue("Should suggest sequence arrows",
             fixTexts.any { it.contains("->>") || it.contains("-->") || it.contains("->") })
     }
+
+    fun testValidLongBidirectionalFlowchartArrow() {
+        // Variable-length bidirectional arrows (<----->) should be valid in flowchart
+        myFixture.configureByText("test.mmd", "flowchart LR\n    A <-----> B")
+        myFixture.checkHighlighting()
+    }
+
+    fun testValidVeryLongFlowchartArrow() {
+        // Very long arrow (------->) should normalize to ---> and be valid
+        myFixture.configureByText("test.mmd", "flowchart LR\n    A -------> B")
+        myFixture.checkHighlighting()
+    }
+
+    fun testQuickFixAppliesArrowReplacement() {
+        myFixture.configureByText("test.mmd", "flowchart LR\n    A ->> B")
+        val fixes = myFixture.getAllQuickFixes()
+        assertTrue("Should have at least one fix", fixes.isNotEmpty())
+        val arrowFix = fixes.first { it.text.contains("-->") }
+        myFixture.launchAction(arrowFix)
+        val text = myFixture.editor.document.text
+        assertTrue("Document should contain '-->' after fix", text.contains("-->"))
+        assertFalse("Document should not contain '->>' after fix", text.contains("->>"))
+    }
 }

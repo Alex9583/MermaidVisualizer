@@ -349,4 +349,5 @@ class MermaidCompletionContributorTest : BasePlatformTestCase() {
         myFixture.type('\n')
         assertEquals("flowchart TD", myFixture.editor.document.text.trimEnd())
     }
+
 }

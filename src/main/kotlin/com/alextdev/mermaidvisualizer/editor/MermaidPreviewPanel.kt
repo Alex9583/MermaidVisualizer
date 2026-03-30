@@ -152,7 +152,7 @@ internal class MermaidPreviewPanel(
                 const c = document.getElementById('mermaid-container');
                 if (c) window.__showError(c, 'Render error: ' + e.message, null, document.body.classList.contains('dark-theme'));
                 if (typeof window.__mermaidErrorBridge === 'function') {
-                    try { window.__mermaidErrorBridge(JSON.stringify({status:'error',message:e.message||String(e),line:null,column:null,gen:$generation})); } catch(_) {}
+                    try { window.__mermaidErrorBridge(JSON.stringify({status:'error',message:e.message||String(e),line:null,column:null,gen:$generation})); } catch(bridgeErr) { console.error('[MermaidVisualizer] error bridge call failed in .catch handler:', bridgeErr); }
                 }
             });
         """.trimIndent()

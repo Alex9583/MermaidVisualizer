@@ -10,8 +10,8 @@ import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.util.ProcessingContext
 
 /**
- * Provides node/participant name completion by scanning IDENTIFIER tokens
- * within the same diagram. Scope is limited to the current diagram (not cross-diagram).
+ * Provides node/participant name completion by scanning [MermaidNodeRef][com.alextdev.mermaidvisualizer.lang.psi.MermaidNodeRef]
+ * elements within the same diagram. Scope is limited to the current diagram (not cross-diagram).
  */
 class MermaidNodeNameProvider : CompletionProvider<CompletionParameters>() {
 

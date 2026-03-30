@@ -64,8 +64,34 @@ class MermaidUnusedNodeInspectionTest : BasePlatformTestCase() {
             "test.mmd",
             "sequenceDiagram\n    participant Alice\n    participant Bob\n    Alice ->> Alice: Self"
         )
-        myFixture.enableInspections(MermaidUnusedNodeInspection())
         val fixes = myFixture.getAllQuickFixes()
         assertTrue("Should have a remove fix", fixes.any { it.text.contains("Remove") })
+    }
+
+    fun testSequenceQuickFixAppliesCorrectly() {
+        myFixture.configureByText(
+            "test.mmd",
+            "sequenceDiagram\n    participant Alice\n    participant Bob\n    Alice ->> Alice: Self"
+        )
+        val fixes = myFixture.getAllQuickFixes()
+        val removeFix = fixes.first { it.text.contains("Remove") }
+        myFixture.launchAction(removeFix)
+        val text = myFixture.editor.document.text
+        assertFalse("Bob declaration should be removed", text.contains("participant Bob"))
+        assertTrue("Alice declaration should remain", text.contains("participant Alice"))
+        assertTrue("Usage should remain", text.contains("Alice ->> Alice: Self"))
+    }
+
+    fun testClassQuickFixAppliesCorrectly() {
+        myFixture.configureByText(
+            "test.mmd",
+            "classDiagram\n    class Animal\n    class Dog\n    Animal <|-- Cat"
+        )
+        val fixes = myFixture.getAllQuickFixes()
+        val removeFix = fixes.first { it.text.contains("Remove") }
+        myFixture.launchAction(removeFix)
+        val text = myFixture.editor.document.text
+        assertFalse("Dog declaration should be removed", text.contains("class Dog"))
+        assertTrue("Animal declaration should remain", text.contains("class Animal"))
     }
 }

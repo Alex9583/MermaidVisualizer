@@ -104,6 +104,9 @@
         <lang.psiStructureViewFactory
             language="Mermaid"
             implementationClass="com.alextdev.mermaidvisualizer.lang.navigation.MermaidStructureViewFactory"/>
+        <lang.foldingBuilder
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidFoldingBuilder"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.intellij.markdown">

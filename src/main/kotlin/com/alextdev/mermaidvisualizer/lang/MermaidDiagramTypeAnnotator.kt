@@ -9,7 +9,6 @@ import com.intellij.openapi.util.text.StringUtil
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
@@ -97,7 +96,7 @@ private class ReplaceDiagramTypeFix(
         MyMessageBundle.message("inspection.fix.replace.diagram.type.family")
 
     override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean = true
-    override fun startInWriteAction(): Boolean = false
+    override fun startInWriteAction(): Boolean = true
 
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
         if (file == null) return
@@ -106,10 +105,8 @@ private class ReplaceDiagramTypeFix(
         // annotation creation and fix invocation
         if (targetRange.endOffset > document.textLength) return
         if (document.getText(targetRange) != wrongType) return
-        WriteCommandAction.runWriteCommandAction(project) {
-            document.replaceString(targetRange.startOffset, targetRange.endOffset, suggestion)
-            PsiDocumentManager.getInstance(project).commitDocument(document)
-        }
+        document.replaceString(targetRange.startOffset, targetRange.endOffset, suggestion)
+        PsiDocumentManager.getInstance(project).commitDocument(document)
     }
 }
 

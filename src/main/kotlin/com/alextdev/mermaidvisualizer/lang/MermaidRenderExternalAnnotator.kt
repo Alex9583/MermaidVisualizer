@@ -55,6 +55,6 @@ class MermaidRenderExternalAnnotator : ExternalAnnotator<MermaidRenderError?, Me
         }
         // Fallback: annotate the first line (diagram type declaration)
         val endOffset = if (document.lineCount > 0) document.getLineEndOffset(0) else document.textLength
-        return TextRange(0, endOffset.coerceAtLeast(0))
+        return TextRange(0, endOffset.coerceAtLeast(0).coerceAtMost(document.textLength))
     }
 }

@@ -26,7 +26,7 @@ class MermaidArrowProvider : CompletionProvider<CompletionParameters>() {
         val position = parameters.position
         if (!MermaidCompletionData.isInsideDiagramBody(position)) return
 
-        // Check prev token first (most selective — filters ~80%+ of cases)
+        // Only offer arrows after an identifier or closing bracket (source → arrow → target pattern)
         val prevLeaf = findPrevNonWhitespaceLeaf(position) ?: return
         val prevType = prevLeaf.elementType
         if (prevType != MermaidTokenTypes.IDENTIFIER && prevType != MermaidTokenTypes.BRACKET_CLOSE) return
@@ -60,7 +60,6 @@ private object ArrowInsertHandler : InsertHandler<LookupElement> {
         val editor = context.editor
         val document = editor.document
         val offset = context.tailOffset
-        // Add trailing space after arrow
         if (offset >= document.textLength || document.text[offset] != ' ') {
             document.insertString(offset, " ")
         }
