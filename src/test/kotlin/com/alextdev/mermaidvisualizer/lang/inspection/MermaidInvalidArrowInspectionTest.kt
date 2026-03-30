@@ -57,6 +57,41 @@ class MermaidInvalidArrowInspectionTest : BasePlatformTestCase() {
         myFixture.checkHighlighting()
     }
 
+    fun testValidErArrowOneToMany() {
+        myFixture.configureByText("test.mmd", "erDiagram\n    CUSTOMER ||--o{ ORDER : places")
+        myFixture.checkHighlighting()
+    }
+
+    fun testValidErArrowOneToManyMandatory() {
+        myFixture.configureByText("test.mmd", "erDiagram\n    CUSTOMER ||--|{ ORDER : contains")
+        myFixture.checkHighlighting()
+    }
+
+    fun testValidErArrowManyToOneMandatory() {
+        myFixture.configureByText("test.mmd", "erDiagram\n    ORDER }|--|| CUSTOMER : belongs")
+        myFixture.checkHighlighting()
+    }
+
+    fun testValidErArrowOneToOne() {
+        myFixture.configureByText("test.mmd", "erDiagram\n    PERSON ||--|| PASSPORT : has")
+        myFixture.checkHighlighting()
+    }
+
+    fun testValidErArrowManyToMany() {
+        myFixture.configureByText("test.mmd", "erDiagram\n    STUDENT }o--o{ COURSE : enrolls")
+        myFixture.checkHighlighting()
+    }
+
+    fun testValidErArrowManyToManyMandatory() {
+        myFixture.configureByText("test.mmd", "erDiagram\n    TEACHER }|--|{ CLASS : teaches")
+        myFixture.checkHighlighting()
+    }
+
+    fun testValidErArrowManyToOne() {
+        myFixture.configureByText("test.mmd", "erDiagram\n    ORDER }o--|| CUSTOMER : belongs")
+        myFixture.checkHighlighting()
+    }
+
     fun testQuickFixSuggestsReplacement() {
         myFixture.configureByText("test.mmd", "flowchart LR\n    A ->> B")
         myFixture.enableInspections(MermaidInvalidArrowInspection())

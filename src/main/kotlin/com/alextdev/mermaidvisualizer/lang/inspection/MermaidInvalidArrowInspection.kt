@@ -62,8 +62,13 @@ class MermaidInvalidArrowInspection : LocalInspectionTool() {
     }
 }
 
-/** Regex matching labeled arrow templates like `-->|text|` that the lexer tokenizes as separate tokens. */
-private val LABELED_ARROW_TEMPLATE = Regex("\\|[^|]+\\|")
+/**
+ * Regex matching labeled arrow templates like `-->|text|` where `|text|` is at the END.
+ * The lexer tokenizes these as separate tokens (ARROW + PIPE + IDENTIFIER + PIPE),
+ * so the template must not be in the valid arrow set for inspection.
+ * End-anchored to avoid matching ER cardinality markers like `||--|{` or `}|--||`.
+ */
+private val LABELED_ARROW_TEMPLATE = Regex("\\|[^|]+\\|$")
 
 private fun nonLabeledArrows(kind: MermaidDiagramKind): List<String> {
     return MermaidCompletionData.arrowsFor(kind)

@@ -99,7 +99,7 @@ blockDivider ::= <<consumeDividerKeyword>>
 statement ::= statementToken_+
 
 private statementToken_ ::= <<consumeNonBlockKeyword>>
-                           | <<consumeNonDividerIdentifier>>
+                           | !<<isDividerKeyword>> nodeRef
                            | ARROW
                            | STRING_DOUBLE
                            | STRING_SINGLE
@@ -110,3 +110,10 @@ private statementToken_ ::= <<consumeNonBlockKeyword>>
                            | PIPE
                            | SEMICOLON
                            | COMMA
+
+// ===== Node reference — wraps IDENTIFIER with PsiNamedElement support =====
+nodeRef ::= IDENTIFIER {
+    mixin="com.alextdev.mermaidvisualizer.lang.psi.impl.MermaidNamedElementImpl"
+    implements="com.alextdev.mermaidvisualizer.lang.psi.MermaidNamedElement"
+    methods=[getName setName getNameIdentifier]
+}

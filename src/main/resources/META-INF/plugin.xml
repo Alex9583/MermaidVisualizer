@@ -94,6 +94,16 @@
         <annotator
             language="Mermaid"
             implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidDiagramTypeAnnotator"/>
+        <!-- Navigation -->
+        <psi.referenceContributor
+            language="Mermaid"
+            implementation="com.alextdev.mermaidvisualizer.lang.navigation.MermaidReferenceContributor"/>
+        <lang.findUsagesProvider
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.navigation.MermaidFindUsagesProvider"/>
+        <lang.psiStructureViewFactory
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.navigation.MermaidStructureViewFactory"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.intellij.markdown">

@@ -306,6 +306,7 @@ object MermaidCompletionData {
         ArrowEntry("}|--||", "completion.mermaid.arrow.manyToOneMandatory"),
         ArrowEntry("||--||", "completion.mermaid.arrow.oneToOne"),
         ArrowEntry("}o--o{", "completion.mermaid.arrow.manyToMany"),
+        ArrowEntry("}|--|{", "completion.mermaid.arrow.manyToManyMandatory"),
     )
 
     private val STATE_ARROWS = listOf(

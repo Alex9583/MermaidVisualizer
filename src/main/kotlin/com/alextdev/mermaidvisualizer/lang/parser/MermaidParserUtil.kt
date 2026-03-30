@@ -118,16 +118,6 @@ object MermaidParserUtil : GeneratedParserUtilBase() {
     }
 
     @JvmStatic
-    fun consumeNonDividerIdentifier(builder: PsiBuilder, level: Int): Boolean {
-        if (builder.tokenType !== MermaidTokenTypes.IDENTIFIER) return false
-        val text = builder.tokenText ?: return false
-        val context = builder.getUserData(DIAGRAM_CONTEXT_KEY)
-        if (text in dividerKeywordsFor(context)) return false
-        builder.advanceLexer()
-        return true
-    }
-
-    @JvmStatic
     fun isBlockKeyword(builder: PsiBuilder, level: Int): Boolean {
         if (builder.tokenType !== MermaidTokenTypes.KEYWORD) return false
         val text = builder.tokenText ?: return false
