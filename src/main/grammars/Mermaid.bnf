@@ -1,0 +1,119 @@
+// Mermaid.bnf — Grammar-Kit grammar for Mermaid diagrams
+// Structural skeleton: diagram declaration + block nesting + statements
+// Per-diagram-type dispatch via external rules in MermaidParserUtil
+{
+  parserClass="com.alextdev.mermaidvisualizer.lang.parser.MermaidParser"
+  parserUtilClass="com.alextdev.mermaidvisualizer.lang.parser.MermaidParserUtil"
+
+  extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+  psiClassPrefix="Mermaid"
+  psiImplClassSuffix="Impl"
+  psiPackage="com.alextdev.mermaidvisualizer.lang.psi"
+  psiImplPackage="com.alextdev.mermaidvisualizer.lang.psi.impl"
+
+  elementTypeHolderClass="com.alextdev.mermaidvisualizer.lang.psi.MermaidElementTypes"
+  elementTypeFactory(".*")="com.alextdev.mermaidvisualizer.lang.psi.MermaidElementTypeFactory.createElement"
+  tokenTypeFactory="com.alextdev.mermaidvisualizer.lang.psi.MermaidElementTypeFactory.createToken"
+
+  tokens = [
+    COMMENT        = "COMMENT"
+    DIRECTIVE      = "DIRECTIVE"
+    DIAGRAM_TYPE   = "DIAGRAM_TYPE"
+    KEYWORD        = "KEYWORD"
+    END_KW         = "END_KW"
+    STRING_DOUBLE  = "STRING_DOUBLE"
+    STRING_SINGLE  = "STRING_SINGLE"
+    ARROW          = "ARROW"
+    NUMBER         = "NUMBER"
+    BRACKET_OPEN   = "BRACKET_OPEN"
+    BRACKET_CLOSE  = "BRACKET_CLOSE"
+    COLON          = "COLON"
+    PIPE           = "PIPE"
+    SEMICOLON      = "SEMICOLON"
+    COMMA          = "COMMA"
+    IDENTIFIER     = "IDENTIFIER"
+  ]
+}
+
+// ===== Root =====
+mermaidFile ::= item_*
+
+private item_ ::= COMMENT | DIRECTIVE | diagram
+  {recoverWhile=item_recover_}
+
+private item_recover_ ::= !(DIAGRAM_TYPE | DIRECTIVE | COMMENT | <<eof>>)
+
+// ===== Diagram dispatch — external rules check DIAGRAM_TYPE text =====
+diagram ::= flowchartDiagram
+           | sequenceDiagram
+           | classDiagram
+           | erDiagram
+           | stateDiagram
+           | genericDiagram
+
+flowchartDiagram ::= <<consumeFlowchartType>> flowchartDirection? diagramBody
+  {pin=1}
+
+sequenceDiagram ::= <<consumeSequenceType>> diagramBody
+  {pin=1}
+
+classDiagram ::= <<consumeClassType>> diagramBody
+  {pin=1}
+
+erDiagram ::= <<consumeErType>> diagramBody
+  {pin=1}
+
+stateDiagram ::= <<consumeStateType>> diagramBody
+  {pin=1}
+
+genericDiagram ::= DIAGRAM_TYPE diagramBody
+  {pin=1}
+
+// ===== Flowchart direction (LR, RL, TD, TB, BT) =====
+flowchartDirection ::= KEYWORD
+
+// ===== Diagram body — shared across all types =====
+diagramBody ::= bodyItem_*
+  {recoverWhile=bodyItem_recover_}
+
+private bodyItem_ ::= COMMENT | DIRECTIVE | block | statement
+
+private bodyItem_recover_ ::= !(END_KW | DIAGRAM_TYPE | <<eof>>)
+
+// ===== Block (subgraph...end, loop...end, alt...else...end, etc.) =====
+block ::= <<consumeBlockKeyword>> blockContent END_KW
+  {pin=1}
+
+blockContent ::= blockContentItem_*
+  {recoverWhile=blockContentItem_recover_}
+
+private blockContentItem_ ::= COMMENT | DIRECTIVE | blockDivider | block | statement
+
+private blockContentItem_recover_ ::= !(END_KW | <<isDividerKeyword>> | <<isBlockKeyword>> | DIAGRAM_TYPE | <<eof>>)
+
+// ===== Block dividers (else, and) =====
+blockDivider ::= <<consumeDividerKeyword>>
+
+// ===== Statement — catch-all for non-block, non-divider tokens =====
+statement ::= statementToken_+
+
+private statementToken_ ::= <<consumeNonBlockKeyword>>
+                           | !<<isDividerKeyword>> nodeRef
+                           | ARROW
+                           | STRING_DOUBLE
+                           | STRING_SINGLE
+                           | NUMBER
+                           | BRACKET_OPEN
+                           | BRACKET_CLOSE
+                           | COLON
+                           | PIPE
+                           | SEMICOLON
+                           | COMMA
+
+// ===== Node reference — wraps IDENTIFIER with PsiNamedElement support =====
+nodeRef ::= IDENTIFIER {
+    mixin="com.alextdev.mermaidvisualizer.lang.psi.impl.MermaidNamedElementImpl"
+    implements="com.alextdev.mermaidvisualizer.lang.psi.MermaidNamedElement"
+    methods=[getName setName getNameIdentifier]
+}

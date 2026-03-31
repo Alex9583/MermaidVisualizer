@@ -18,6 +18,7 @@ private val DESCRIPTORS = arrayOf(
     AttributesDescriptor(MyMessageBundle.message("color.settings.mermaid.arrow"), MERMAID_ARROW_KEY),
     AttributesDescriptor(MyMessageBundle.message("color.settings.mermaid.number"), MERMAID_NUMBER_KEY),
     AttributesDescriptor(MyMessageBundle.message("color.settings.mermaid.braces"), MERMAID_BRACES_KEY),
+    AttributesDescriptor(MyMessageBundle.message("color.settings.mermaid.punctuation"), MERMAID_PUNCTUATION_KEY),
     AttributesDescriptor(MyMessageBundle.message("color.settings.mermaid.identifier"), MERMAID_IDENTIFIER_KEY),
     AttributesDescriptor(MyMessageBundle.message("color.settings.mermaid.badCharacter"), MERMAID_BAD_CHAR_KEY),
 )

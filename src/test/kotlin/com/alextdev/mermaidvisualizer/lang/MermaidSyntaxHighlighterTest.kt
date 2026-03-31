@@ -87,10 +87,23 @@ class MermaidSyntaxHighlighterTest {
     }
 
     @Test
-    fun testPunctuationReturnsEmptyKeys() {
-        assertTrue(highlighter.getTokenHighlights(MermaidTokenTypes.COLON).isEmpty())
-        assertTrue(highlighter.getTokenHighlights(MermaidTokenTypes.PIPE).isEmpty())
-        assertTrue(highlighter.getTokenHighlights(MermaidTokenTypes.SEMICOLON).isEmpty())
+    fun testPunctuationHighlight() {
+        val colonKeys = highlighter.getTokenHighlights(MermaidTokenTypes.COLON)
+        assertEquals(1, colonKeys.size)
+        assertEquals(MERMAID_PUNCTUATION_KEY, colonKeys[0])
+        val semicolonKeys = highlighter.getTokenHighlights(MermaidTokenTypes.SEMICOLON)
+        assertEquals(1, semicolonKeys.size)
+        assertEquals(MERMAID_PUNCTUATION_KEY, semicolonKeys[0])
+        val commaKeys = highlighter.getTokenHighlights(MermaidTokenTypes.COMMA)
+        assertEquals(1, commaKeys.size)
+        assertEquals(MERMAID_PUNCTUATION_KEY, commaKeys[0])
+    }
+
+    @Test
+    fun testPipeHighlight() {
+        val keys = highlighter.getTokenHighlights(MermaidTokenTypes.PIPE)
+        assertEquals(1, keys.size)
+        assertEquals(MERMAID_BRACES_KEY, keys[0])
     }
 
     @Test
@@ -108,8 +121,16 @@ class MermaidSyntaxHighlighterTest {
         assertEquals(DefaultLanguageHighlighterColors.MARKUP_TAG, MERMAID_ARROW_KEY.fallbackAttributeKey)
         assertEquals(DefaultLanguageHighlighterColors.NUMBER, MERMAID_NUMBER_KEY.fallbackAttributeKey)
         assertEquals(DefaultLanguageHighlighterColors.PARENTHESES, MERMAID_BRACES_KEY.fallbackAttributeKey)
+        assertEquals(DefaultLanguageHighlighterColors.OPERATION_SIGN, MERMAID_PUNCTUATION_KEY.fallbackAttributeKey)
         assertEquals(DefaultLanguageHighlighterColors.INSTANCE_FIELD, MERMAID_IDENTIFIER_KEY.fallbackAttributeKey)
         assertEquals(HighlighterColors.BAD_CHARACTER, MERMAID_BAD_CHAR_KEY.fallbackAttributeKey)
+    }
+
+    @Test
+    fun testEndKwHighlight() {
+        val keys = highlighter.getTokenHighlights(MermaidTokenTypes.END_KW)
+        assertEquals(1, keys.size)
+        assertEquals(MERMAID_KEYWORD_KEY, keys[0])
     }
 
     @Test

@@ -38,6 +38,8 @@ internal class MermaidPreviewPanel(
     private val copySvgQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private val copyPngQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private val saveQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    private val errorQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    private var errorCallback: ((String) -> Unit)? = null
 
     val component: JComponent get() = browser.component
 
@@ -47,6 +49,7 @@ internal class MermaidPreviewPanel(
         Disposer.register(parentDisposable, copySvgQuery)
         Disposer.register(parentDisposable, copyPngQuery)
         Disposer.register(parentDisposable, saveQuery)
+        Disposer.register(parentDisposable, errorQuery)
 
         scrollQuery.addHandler { fractionStr ->
             val fraction = fractionStr.toDoubleOrNull()
@@ -75,6 +78,15 @@ internal class MermaidPreviewPanel(
             null
         }
 
+        errorQuery.addHandler { payload ->
+            ApplicationManager.getApplication().invokeLater {
+                if (!browser.isDisposed) {
+                    errorCallback?.invoke(payload)
+                }
+            }
+            null
+        }
+
         browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
             override fun onLoadEnd(cefBrowser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
                 if (frame?.isMain == true) {
@@ -86,6 +98,7 @@ internal class MermaidPreviewPanel(
                         pageLoaded = true
                         injectScrollBridge()
                         injectExportBridges()
+                        injectErrorBridge()
                         pendingRender?.invoke()
                         pendingRender = null
                     }
@@ -126,7 +139,7 @@ internal class MermaidPreviewPanel(
 
     private var scrollCallback: ((Double) -> Unit)? = null
 
-    fun render(source: String, isDark: Boolean, forceThemeRefresh: Boolean = false) {
+    fun render(source: String, isDark: Boolean, forceThemeRefresh: Boolean = false, generation: Long = 0L) {
         if (browser.isDisposed) return
         val encoded = BASE64_ENCODER.encodeToString(source.toByteArray(Charsets.UTF_8))
         val themeClass = if (isDark) "dark-theme" else ""
@@ -134,10 +147,13 @@ internal class MermaidPreviewPanel(
         val js = """
             window.__MERMAID_CONFIG=$configJson;
             document.body.className='$themeClass';
-            window.renderDiagram('$encoded',$forceThemeRefresh).catch(function(e) {
+            window.renderDiagram('$encoded',$forceThemeRefresh,$generation).catch(function(e) {
                 console.error('[MermaidVisualizer] renderDiagram failed: ' + e.message);
                 const c = document.getElementById('mermaid-container');
                 if (c) window.__showError(c, 'Render error: ' + e.message, null, document.body.classList.contains('dark-theme'));
+                if (typeof window.__mermaidErrorBridge === 'function') {
+                    try { window.__mermaidErrorBridge(JSON.stringify({status:'error',message:e.message||String(e),line:null,column:null,gen:$generation})); } catch(bridgeErr) { console.error('[MermaidVisualizer] error bridge call failed in .catch handler:', bridgeErr); }
+                }
             });
         """.trimIndent()
 
@@ -152,6 +168,10 @@ internal class MermaidPreviewPanel(
 
     fun setScrollCallback(callback: (Double) -> Unit) {
         scrollCallback = callback
+    }
+
+    fun setErrorCallback(callback: (String) -> Unit) {
+        errorCallback = callback
     }
 
     fun scrollToFraction(fraction: Double) {
@@ -169,6 +189,13 @@ internal class MermaidPreviewPanel(
         val injection = scrollQuery.inject("fraction")
         val js = "window.__mermaidScrollBridge = function(fraction) { $injection };"
         browser.cefBrowser.executeJavaScript(js, "mermaid-scroll-bridge", 0)
+    }
+
+    private fun injectErrorBridge() {
+        if (browser.isDisposed) return
+        val injection = errorQuery.inject("payload")
+        val js = "window.__mermaidErrorBridge = function(payload) { $injection };"
+        browser.cefBrowser.executeJavaScript(js, "mermaid-error-bridge", 0)
     }
 
     private fun injectExportBridges() {

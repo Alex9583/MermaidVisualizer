@@ -1,20 +1,33 @@
 # Mermaid Visualizer
 
-IntelliJ plugin that renders [Mermaid](https://mermaid.js.org/) diagrams directly in the Markdown preview.
+IntelliJ plugin for [Mermaid](https://mermaid.js.org/) diagrams — live preview, code intelligence, and export, all offline.
 
 ## Features
 
+### Rendering & Preview
 - Renders ` ```mermaid ` code blocks in the built-in Markdown preview
 - Dedicated split editor for `.mmd` and `.mermaid` files with live preview
 - Zoom (Ctrl+wheel), pan (click & drag), fit-to-window & 1:1 controls
 - Export diagrams as SVG or PNG — copy to clipboard or save to file
 - Scroll synchronization between the text editor and the preview
-- Syntax highlighting for keywords, diagram types, arrows, strings, comments, and more
-- Customizable colors via Settings > Editor > Color Scheme > Mermaid
-- Settings page (Settings > Tools > Mermaid) — theme, look (classic/hand-drawn), font family, max text size, live reload delay
-- Uses the official Mermaid.js library (v11.13.0) — supports all 24+ diagram types
 - Automatic dark/light theme detection and switching
+- Uses the official Mermaid.js library (v11.13.0) — supports all 24+ diagram types
 - Works offline — Mermaid.js is bundled, no CDN required
+
+### Code Intelligence
+- **Syntax highlighting** — keywords, diagram types, arrows, strings, comments, punctuation
+- **Customizable colors** via Settings > Editor > Color Scheme > Mermaid
+- **Code completion** — 24 diagram types, context-sensitive keywords, node/participant names, arrows, directives
+- **Go to Definition** (Ctrl+B) — navigate to node/participant declarations
+- **Find Usages** (Alt+F7) — find all references to a node across the diagram
+- **Rename** (Shift+F6) — rename nodes/participants with all references updated
+- **Structure View** (Alt+7) — hierarchical view of diagrams, blocks, and nodes
+- **Code Folding** — fold subgraphs, loop/alt/opt/par blocks, and consecutive comments
+- **Inspections & quick-fixes** — unknown diagram types (with typo suggestions), invalid arrows per diagram context, unused node declarations
+- **Render error annotations** — Mermaid.js parsing errors surfaced directly in the editor
+
+### Settings
+- Settings page (Settings > Tools > Mermaid) — theme, look (classic/hand-drawn), font family, max text size, live reload delay
 
 ## Requirements
 

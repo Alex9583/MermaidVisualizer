@@ -4,25 +4,37 @@
     <vendor url="https://github.com/Alex9583">alextdev</vendor>
 
     <description><![CDATA[
-        <p>Renders <a href="https://mermaid.js.org/">Mermaid</a> diagrams directly in the Markdown preview using the official Mermaid.js library (v11.13.0).</p>
+        <p><a href="https://mermaid.js.org/">Mermaid</a> diagrams in your IDE — live preview, code intelligence, and export, all offline.</p>
 
-        <h2>Features</h2>
+        <h2>Rendering &amp; Preview</h2>
         <ul>
             <li>Live rendering of <code>```mermaid</code> code blocks in the Markdown preview</li>
             <li>Dedicated split editor with live preview for <code>.mmd</code> and <code>.mermaid</code> files</li>
             <li>Zoom (<code>Ctrl+wheel</code>), pan, fit-to-window and 1:1 controls</li>
             <li>Export diagrams as SVG or PNG — copy to clipboard or save to file</li>
-            <li>Configurable settings (<code>Settings &gt; Tools &gt; Mermaid</code>) — theme, look (classic/hand-drawn), font family, max text size, live reload delay</li>
             <li>Automatic dark/light theme matching with your IDE</li>
-            <li>Fully offline — Mermaid.js is bundled, no internet required</li>
-            <li>Works in all JetBrains IDEs with Markdown support</li>
+            <li>All 24+ Mermaid diagram types — fully offline with bundled Mermaid.js (v11.13.0)</li>
         </ul>
 
-        <h2>Supported Diagrams</h2>
-        <p>All 24+ Mermaid diagram types: flowchart, sequence, class, state, ER, gantt, pie, git graph, mindmap, timeline, sankey, venn, ishikawa, and more.</p>
+        <h2>Code Intelligence</h2>
+        <ul>
+            <li>Syntax highlighting — keywords, diagram types, arrows, strings, comments, punctuation</li>
+            <li>Code completion — diagram types, context-sensitive keywords, node/participant names, arrows, directives</li>
+            <li>Go to Definition (<code>Ctrl+B</code>) — navigate to node/participant declarations</li>
+            <li>Find Usages (<code>Alt+F7</code>) — find all references to a node across the diagram</li>
+            <li>Rename (<code>Shift+F6</code>) — rename nodes/participants with all references updated</li>
+            <li>Structure View (<code>Alt+7</code>) — hierarchical view of diagrams, blocks, and nodes</li>
+            <li>Code Folding — fold subgraphs, loop/alt/opt/par blocks, and consecutive comments</li>
+            <li>Inspections &amp; quick-fixes — unknown diagram types (with typo suggestions), invalid arrows, unused nodes</li>
+            <li>Render error annotations — Mermaid.js parsing errors surfaced directly in the editor</li>
+        </ul>
+
+        <h2>Settings</h2>
+        <p>Configurable via <code>Settings &gt; Tools &gt; Mermaid</code> — theme, look (classic/hand-drawn), font family, max text size, live reload delay.</p>
+        <p>Customizable colors via <code>Settings &gt; Editor &gt; Color Scheme &gt; Mermaid</code>.</p>
 
         <h2>Usage</h2>
-        <p>Simply write a <code>```mermaid</code> fenced code block in any Markdown file and open the preview.</p>
+        <p>Write a <code>```mermaid</code> fenced code block in any Markdown file and open the preview, or open any <code>.mmd</code>/<code>.mermaid</code> file.</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
@@ -52,12 +64,61 @@
                            key="notification.group.mermaid"/>
         <applicationService
             serviceImplementation="com.alextdev.mermaidvisualizer.settings.MermaidSettings"/>
+        <completion.contributor
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.completion.MermaidCompletionContributor"/>
         <applicationConfigurable
             parentId="tools"
             instance="com.alextdev.mermaidvisualizer.settings.MermaidSettingsConfigurable"
             id="com.alextdev.mermaidvisualizer.settings"
             key="settings.mermaid.displayName"
             bundle="messages.MyMessageBundle"/>
+        <localInspection
+            language="Mermaid"
+            groupKey="inspection.group.mermaid"
+            bundle="messages.MyMessageBundle"
+            shortName="MermaidUnknownDiagramType"
+            key="inspection.unknown.diagram.type.display"
+            level="ERROR"
+            enabledByDefault="true"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.inspection.MermaidUnknownDiagramTypeInspection"/>
+        <localInspection
+            language="Mermaid"
+            groupKey="inspection.group.mermaid"
+            bundle="messages.MyMessageBundle"
+            shortName="MermaidInvalidArrow"
+            key="inspection.invalid.arrow.display"
+            level="WARNING"
+            enabledByDefault="true"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.inspection.MermaidInvalidArrowInspection"/>
+        <localInspection
+            language="Mermaid"
+            groupKey="inspection.group.mermaid"
+            bundle="messages.MyMessageBundle"
+            shortName="MermaidUnusedNode"
+            key="inspection.unused.node.display"
+            level="WARNING"
+            enabledByDefault="true"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.inspection.MermaidUnusedNodeInspection"/>
+        <externalAnnotator
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidRenderExternalAnnotator"/>
+        <annotator
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidDiagramTypeAnnotator"/>
+        <!-- Navigation -->
+        <psi.referenceContributor
+            language="Mermaid"
+            implementation="com.alextdev.mermaidvisualizer.lang.navigation.MermaidReferenceContributor"/>
+        <lang.findUsagesProvider
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.navigation.MermaidFindUsagesProvider"/>
+        <lang.psiStructureViewFactory
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.navigation.MermaidStructureViewFactory"/>
+        <lang.foldingBuilder
+            language="Mermaid"
+            implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidFoldingBuilder"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.intellij.markdown">

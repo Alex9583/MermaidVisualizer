@@ -41,10 +41,22 @@
         if (container) core.showError(container, shadowCss, 'Failed to initialize Mermaid: ' + e.message, null, false);
     }
 
-    window.renderDiagram = async function (base64Source, forceThemeRefresh) {
+    function reportRenderResult(info, generation) {
+        if (typeof window.__mermaidErrorBridge === 'function') {
+            try {
+                info.gen = generation;
+                window.__mermaidErrorBridge(JSON.stringify(info));
+            } catch (e) {
+                console.error('[MermaidVisualizer] error bridge call failed:', e);
+            }
+        }
+    }
+
+    window.renderDiagram = async function (base64Source, forceThemeRefresh, generation) {
         const container = document.getElementById('mermaid-container');
         if (!container) {
             console.error('[MermaidVisualizer] mermaid-container element not found in DOM');
+            reportRenderResult({ status: 'error', message: 'Internal error: container not found', line: null, column: null }, generation);
             return;
         }
 
@@ -58,6 +70,7 @@
             } catch (e) {
                 console.error('[MermaidVisualizer] mermaid.initialize failed:', e);
                 core.showError(container, shadowCss, 'Failed to initialize Mermaid: ' + e.message, null, isDark);
+                reportRenderResult({ status: 'error', message: 'Failed to initialize Mermaid: ' + e.message, line: null, column: null }, generation);
                 return;
             }
         }
@@ -67,12 +80,14 @@
             source = core.base64ToUtf8(base64Source);
         } catch (e) {
             core.showError(container, shadowCss, 'Failed to decode diagram source', null, isDark);
+            reportRenderResult({ status: 'error', message: 'Failed to decode diagram source', line: null, column: null }, generation);
             return;
         }
 
         source = source.trim();
         if (!source) {
             if (container.shadowRoot) container.shadowRoot.textContent = '';
+            reportRenderResult({ status: 'ok' }, generation);
             return;
         }
 
@@ -81,6 +96,7 @@
             const result = await mermaid.render(renderId, source);
             if (result && typeof result.svg === 'string') {
                 core.injectSvg(container, shadowCss, result.svg, isDark);
+                reportRenderResult({ status: 'ok' }, generation);
                 const toolbar = createStandaloneToolbar();
                 if (toolbar) container.shadowRoot.appendChild(toolbar);
                 if (window.__initMermaidZoom) {
@@ -103,10 +119,12 @@
                 }
             } else {
                 core.showError(container, shadowCss, 'Unexpected render result', renderId, isDark);
+                reportRenderResult({ status: 'error', message: 'Unexpected render result', line: null, column: null }, generation);
             }
         } catch (err) {
             console.error('[MermaidVisualizer] Render failed', err);
             core.showError(container, shadowCss, err.message || String(err), renderId, isDark);
+            reportRenderResult(core.parseErrorInfo(err), generation);
         }
     };
 
