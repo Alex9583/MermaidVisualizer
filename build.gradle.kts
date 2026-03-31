@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.alextdev"
-version = "1.4.1"
+version = "1.5.0"
 
 repositories {
     mavenCentral()

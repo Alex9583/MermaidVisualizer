@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.5.0] - 2026-03-31
+
+- Add code intelligence — completion, inspections, navigation, and code folding (#9)
+
 ## [1.4.1] - 2026-03-21
 
 - Refactor: Extract and modularize mermaid-core functionality, fix fit-to-window button (#7)
