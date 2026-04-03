@@ -48,6 +48,8 @@ import static com.intellij.psi.TokenType.*;
         "group", "service", "junction",
         // Venn
         "set", "union",
+        // Wardley
+        "component", "pipeline", "evolve", "evolution", "size", "anchor", "source",
         // Requirement diagram
         "element", "requirement", "functionalRequirement", "interfaceRequirement",
         "performanceRequirement", "designConstraint",
@@ -127,7 +129,10 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
     | "packet-beta"
     | "architecture-beta"
     | "venn-beta"
-    | "ishikawa-beta"              { yybegin(NORMAL); return DIAGRAM_TYPE; }
+    | "ishikawa-beta"
+    | "wardley-beta"
+    | "treeView-beta"
+    | "treemap-beta"               { yybegin(NORMAL); return DIAGRAM_TYPE; }
 
     "---"                           { yybegin(FRONTMATTER); return DIRECTIVE; }
 

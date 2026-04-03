@@ -58,18 +58,21 @@ internal fun copyPngToClipboard(b64: String, project: Project?) {
         notifyMermaid(project, MyMessageBundle.message("markdown.export.copy.failed"), NotificationType.ERROR)
         return
     }
-    try {
-        val pngBytes = Base64.getDecoder().decode(b64)
-        val image = ImageIO.read(ByteArrayInputStream(pngBytes))
-            ?: throw IllegalStateException("Failed to decode PNG image from ${pngBytes.size} bytes")
-        CopyPasteManager.getInstance().setContents(ImageTransferable(image))
-        notifyMermaid(project, MyMessageBundle.message("markdown.export.copy.png.success"), NotificationType.INFORMATION)
-    } catch (e: IllegalArgumentException) {
-        LOG.error("Failed to copy PNG: invalid base64 (length=${b64.length})", e)
-        notifyMermaid(project, MyMessageBundle.message("markdown.export.copy.failed"), NotificationType.ERROR)
-    } catch (e: Exception) {
-        LOG.error("Failed to copy PNG", e)
-        notifyMermaid(project, MyMessageBundle.message("markdown.export.copy.failed"), NotificationType.ERROR)
+    ApplicationManager.getApplication().executeOnPooledThread {
+        try {
+            val pngBytes = Base64.getDecoder().decode(b64)
+            val image = ImageIO.read(ByteArrayInputStream(pngBytes))
+                ?: throw IllegalStateException("Failed to decode PNG image from ${pngBytes.size} bytes")
+            ApplicationManager.getApplication().invokeLater {
+                CopyPasteManager.getInstance().setContents(ImageTransferable(image))
+                notifyMermaid(project, MyMessageBundle.message("markdown.export.copy.png.success"), NotificationType.INFORMATION)
+            }
+        } catch (e: Exception) {
+            LOG.error("Failed to copy PNG", e)
+            ApplicationManager.getApplication().invokeLater {
+                notifyMermaid(project, MyMessageBundle.message("markdown.export.copy.failed"), NotificationType.ERROR)
+            }
+        }
     }
 }
 

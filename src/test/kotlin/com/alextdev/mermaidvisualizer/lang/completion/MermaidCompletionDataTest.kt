@@ -19,6 +19,7 @@ class MermaidCompletionDataTest {
             "C4Context", "C4Container", "C4Component", "C4Dynamic", "C4Deployment",
             "zenuml", "kanban", "block-beta", "packet-beta",
             "architecture-beta", "venn-beta", "ishikawa-beta",
+            "wardley-beta", "treeView-beta", "treemap-beta",
         )
         val actual = MermaidDiagramKind.entries.map { it.keyword }.toSet()
         assertEquals(expectedKeywords, actual)
@@ -38,6 +39,12 @@ class MermaidCompletionDataTest {
         assertTrue(keywords.containsAll(setOf("participant", "actor", "loop", "alt", "else", "opt", "note")))
         assertFalse(keywords.contains("subgraph"))
         assertFalse(keywords.contains("classDef"))
+    }
+
+    @Test
+    fun testWardleyKeywordsContainExpected() {
+        val keywords = MermaidCompletionData.keywordsFor(MermaidDiagramKind.WARDLEY)
+        assertTrue(keywords.containsAll(setOf("component", "pipeline", "evolve", "evolution", "title", "size")))
     }
 
     @Test
@@ -94,7 +101,7 @@ class MermaidCompletionDataTest {
         assertEquals(expectedThemes, MermaidCompletionData.DIRECTIVE_THEME_VALUES.toSet())
 
         // Looks should match MermaidLook enum js values
-        val expectedLooks = setOf("classic", "handDrawn")
+        val expectedLooks = setOf("classic", "handDrawn", "neo")
         assertEquals(expectedLooks, MermaidCompletionData.DIRECTIVE_LOOK_VALUES.toSet())
     }
 

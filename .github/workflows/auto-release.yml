@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   release:
@@ -17,7 +18,24 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Clean Gradle transforms cache
+        run: rm -rf ~/.gradle/caches/*/transforms
+
+      - name: Build
+        run: ./gradlew build
+
+      - name: Verify Plugin
+        run: ./gradlew verifyPlugin
 
       - name: Determine bump type
         id: bump
@@ -81,7 +99,6 @@ jobs:
         run: |
           DATE=$(date +%Y-%m-%d)
           ENTRY=$(printf '## [%s] - %s\n\n- %s (#%s)\n' "$VERSION" "$DATE" "$PR_TITLE" "$PR_NUMBER")
-          # Insert new entry before the first existing ## [ section
           LINE=$(grep -n '^## \[' CHANGELOG.md | head -1 | cut -d: -f1)
           if [ -n "$LINE" ]; then
             head -n "$((LINE - 1))" CHANGELOG.md > CHANGELOG.tmp
@@ -103,28 +120,8 @@ jobs:
           git tag "v$NEW_VERSION"
           git push origin master --tags
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Build
-        run: ./gradlew build
-
-      - name: Verify Plugin
-        run: ./gradlew verifyPlugin
-
-      - name: Publish to JetBrains Marketplace
-        env:
-          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
-        run: ./gradlew publishPlugin
-
-      - name: Create GitHub Release
+      - name: Trigger release workflow
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.new }}
-        run: gh release create "v$VERSION" build/distributions/*.zip --title "v$VERSION" --generate-notes
+          TAG: v${{ steps.version.outputs.new }}
+        run: gh workflow run release.yml --ref "$TAG"

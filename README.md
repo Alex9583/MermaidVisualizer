@@ -11,13 +11,13 @@ IntelliJ plugin for [Mermaid](https://mermaid.js.org/) diagrams — live preview
 - Export diagrams as SVG or PNG — copy to clipboard or save to file
 - Scroll synchronization between the text editor and the preview
 - Automatic dark/light theme detection and switching
-- Uses the official Mermaid.js library (v11.13.0) — supports all 24+ diagram types
+- Uses the official Mermaid.js library (v11.14.0) — supports all 27+ diagram types
 - Works offline — Mermaid.js is bundled, no CDN required
 
 ### Code Intelligence
 - **Syntax highlighting** — keywords, diagram types, arrows, strings, comments, punctuation
 - **Customizable colors** via Settings > Editor > Color Scheme > Mermaid
-- **Code completion** — 24 diagram types, context-sensitive keywords, node/participant names, arrows, directives
+- **Code completion** — 27 diagram types, context-sensitive keywords, node/participant names, arrows, directives
 - **Go to Definition** (Ctrl+B) — navigate to node/participant declarations
 - **Find Usages** (Alt+F7) — find all references to a node across the diagram
 - **Rename** (Shift+F6) — rename nodes/participants with all references updated

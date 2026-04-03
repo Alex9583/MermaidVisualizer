@@ -42,6 +42,9 @@ enum class MermaidDiagramKind(val keyword: String, val displayKey: String) {
     ARCHITECTURE("architecture-beta", "completion.mermaid.diagram.architecture"),
     VENN("venn-beta", "completion.mermaid.diagram.venn"),
     ISHIKAWA("ishikawa-beta", "completion.mermaid.diagram.ishikawa"),
+    WARDLEY("wardley-beta", "completion.mermaid.diagram.wardley"),
+    TREEVIEW("treeView-beta", "completion.mermaid.diagram.treeview"),
+    TREEMAP("treemap-beta", "completion.mermaid.diagram.treemap"),
 }
 
 /**
@@ -135,6 +138,11 @@ object MermaidCompletionData {
 
     private val VENN_KEYWORDS = setOf("set", "union")
 
+    private val WARDLEY_KEYWORDS = setOf(
+        "title", "size", "component", "pipeline", "evolve", "evolution",
+        "anchor", "source", "label",
+    )
+
     private val TIMELINE_KEYWORDS = setOf("title", "section")
 
     private val JOURNEY_KEYWORDS = setOf("title", "section")
@@ -172,6 +180,9 @@ object MermaidCompletionData {
             MermaidDiagramKind.ARCHITECTURE to ARCHITECTURE_KEYWORDS,
             MermaidDiagramKind.VENN to VENN_KEYWORDS,
             MermaidDiagramKind.ISHIKAWA to emptySet(),
+            MermaidDiagramKind.WARDLEY to WARDLEY_KEYWORDS,
+            MermaidDiagramKind.TREEVIEW to emptySet(),
+            MermaidDiagramKind.TREEMAP to emptySet(),
         )
         val missing = MermaidDiagramKind.entries.toSet() - map.keys
         check(missing.isEmpty()) { "KEYWORDS_BY_KIND missing entries for: $missing" }
@@ -222,7 +233,10 @@ object MermaidCompletionData {
         MermaidDiagramKind.ARCHITECTURE,
         MermaidDiagramKind.VENN,
         MermaidDiagramKind.ISHIKAWA,
+        MermaidDiagramKind.TREEVIEW,
+        MermaidDiagramKind.TREEMAP,
         -> emptySet()
+        MermaidDiagramKind.WARDLEY -> setOf("pipeline")
     }
 
     /** Divider keywords valid inside blocks for a given diagram kind. */
@@ -256,6 +270,9 @@ object MermaidCompletionData {
         MermaidDiagramKind.ARCHITECTURE,
         MermaidDiagramKind.VENN,
         MermaidDiagramKind.ISHIKAWA,
+        MermaidDiagramKind.WARDLEY,
+        MermaidDiagramKind.TREEVIEW,
+        MermaidDiagramKind.TREEMAP,
         -> emptySet()
     }
 
@@ -344,6 +361,9 @@ object MermaidCompletionData {
             MermaidDiagramKind.ARCHITECTURE to emptyList(),
             MermaidDiagramKind.VENN to emptyList(),
             MermaidDiagramKind.ISHIKAWA to emptyList(),
+            MermaidDiagramKind.WARDLEY to emptyList(),
+            MermaidDiagramKind.TREEVIEW to emptyList(),
+            MermaidDiagramKind.TREEMAP to emptyList(),
         )
         val missing = MermaidDiagramKind.entries.toSet() - map.keys
         check(missing.isEmpty()) { "ARROWS_BY_KIND missing entries for: $missing" }
@@ -370,7 +390,7 @@ object MermaidCompletionData {
 
     val DIRECTIVE_CONFIG_KEYS = listOf("theme", "look", "fontFamily", "maxTextSize")
     val DIRECTIVE_THEME_VALUES = listOf("default", "dark", "forest", "neutral")
-    val DIRECTIVE_LOOK_VALUES = listOf("classic", "handDrawn")
+    val DIRECTIVE_LOOK_VALUES = listOf("classic", "handDrawn", "neo")
 
     // ── Context detection ──────────────────────────────────────────────
 

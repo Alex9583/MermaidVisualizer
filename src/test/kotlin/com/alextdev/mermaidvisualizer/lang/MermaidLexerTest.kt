@@ -81,7 +81,8 @@ class MermaidLexerTest {
         "requirementDiagram", "C4Context", "C4Container",
         "C4Component", "C4Dynamic", "C4Deployment", "zenuml",
         "kanban", "block-beta", "packet-beta", "architecture-beta",
-        "venn-beta", "ishikawa-beta"
+        "venn-beta", "ishikawa-beta",
+        "wardley-beta", "treeView-beta", "treemap-beta"
     ])
     fun testDiagramTypeAtLineStart(diagramType: String) {
         val tokens = nonWhitespaceTokens(diagramType)
@@ -388,6 +389,8 @@ class MermaidLexerTest {
         "group", "service", "junction",
         // Venn
         "set", "union",
+        // Wardley
+        "component", "pipeline", "evolve", "evolution", "size", "anchor", "source",
         // Requirement
         "element", "requirement", "functionalRequirement", "interfaceRequirement",
         "performanceRequirement", "designConstraint",
@@ -494,6 +497,46 @@ class MermaidLexerTest {
         val tokens = nonWhitespaceTokens(input)
         assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
         assertEquals("ishikawa-beta", tokens[0].second)
+    }
+
+    @Test
+    fun testWardleyDiagramSnippet() {
+        val input = """
+            wardley-beta
+              title Tea Shop
+              component Cup [0.79, 0.61]
+              evolve Cup 0.75
+        """.trimIndent()
+        val tokens = nonWhitespaceTokens(input)
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals("wardley-beta", tokens[0].second)
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "title" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "component" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "evolve" })
+    }
+
+    @Test
+    fun testTreeViewDiagramSnippet() {
+        val input = """
+            treeView-beta
+              "src"
+                "main"
+        """.trimIndent()
+        val tokens = nonWhitespaceTokens(input)
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals("treeView-beta", tokens[0].second)
+    }
+
+    @Test
+    fun testTreemapDiagramSnippet() {
+        val input = """
+            treemap-beta
+            "Products"
+                "Phones": 50
+        """.trimIndent()
+        val tokens = nonWhitespaceTokens(input)
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals("treemap-beta", tokens[0].second)
     }
 
     @Test

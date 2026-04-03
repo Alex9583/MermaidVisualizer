@@ -1,6 +1,6 @@
 # All Mermaid Diagram Types
 
-Test file covering all 24+ Mermaid diagram types for manual and automated verification.
+Test file covering all 27+ Mermaid diagram types for manual and automated verification.
 
 ## 1. Flowchart
 
@@ -315,6 +315,57 @@ ishikawa-beta
       Damaged sensor
   Environment
     Too dark
+```
+
+## 25. Wardley Map (beta)
+
+```mermaid
+wardley-beta
+title Tea Shop
+size [1100, 800]
+
+evolution Genesis -> Custom -> Product -> Commodity
+
+component Cup of Tea [0.79, 0.61]
+component Cup [0.73, 0.78]
+component Tea [0.63, 0.5]
+component Water [0.44, 0.89]
+component Kettle [0.57, 0.45]
+component Power [0.10, 0.70]
+
+Cup of Tea -> Cup
+Cup of Tea -> Tea
+Cup of Tea -> Water
+Water -> Kettle
+Kettle -> Power
+
+evolve Kettle 0.75
+```
+
+## 26. TreeView (beta)
+
+```mermaid
+treeView-beta
+    "src"
+        "main"
+            "kotlin"
+            "resources"
+        "test"
+            "kotlin"
+            "resources"
+```
+
+## 27. Treemap (beta)
+
+```mermaid
+treemap-beta
+"Products"
+    "Electronics"
+        "Phones": 50
+        "Computers": 30
+    "Clothing"
+        "Men's": 40
+        "Women's": 40
 ```
 
 ---

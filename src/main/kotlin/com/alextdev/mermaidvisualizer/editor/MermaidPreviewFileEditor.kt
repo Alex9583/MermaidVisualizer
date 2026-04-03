@@ -163,8 +163,7 @@ internal class MermaidPreviewFileEditor(
 
     private fun restartAnalyzer() {
         val psiFile = PsiManager.getInstance(project).findFile(file) ?: return
-        @Suppress("DEPRECATION")
-        DaemonCodeAnalyzer.getInstance(project).restart(psiFile)
+        DaemonCodeAnalyzer.getInstance(project).restart(psiFile, "Mermaid render error updated")
     }
 
     fun attachEditor(editor: Editor) {
