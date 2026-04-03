@@ -34,6 +34,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Clean Gradle transforms cache
+        run: rm -rf ~/.gradle/caches/*/transforms
+
       - name: Build
         run: ./gradlew build
 
