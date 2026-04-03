@@ -161,5 +161,6 @@ class MermaidSettingsTest {
     fun `MermaidLook enum has correct jsValues`() {
         assertEquals("classic", MermaidLook.CLASSIC.jsValue)
         assertEquals("handDrawn", MermaidLook.HAND_DRAWN.jsValue)
+        assertEquals("neo", MermaidLook.NEO.jsValue)
     }
 }

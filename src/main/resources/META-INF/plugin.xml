@@ -13,7 +13,7 @@
             <li>Zoom (<code>Ctrl+wheel</code>), pan, fit-to-window and 1:1 controls</li>
             <li>Export diagrams as SVG or PNG — copy to clipboard or save to file</li>
             <li>Automatic dark/light theme matching with your IDE</li>
-            <li>All 24+ Mermaid diagram types — fully offline with bundled Mermaid.js (v11.13.0)</li>
+            <li>All 27+ Mermaid diagram types — fully offline with bundled Mermaid.js (v11.14.0)</li>
         </ul>
 
         <h2>Code Intelligence</h2>

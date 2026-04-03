@@ -84,6 +84,7 @@ enum class MermaidTheme(val jsValue: String?, val displayKey: String) {
 enum class MermaidLook(val jsValue: String, val displayKey: String) {
     CLASSIC("classic", "settings.mermaid.look.classic"),
     HAND_DRAWN("handDrawn", "settings.mermaid.look.handDrawn"),
+    NEO("neo", "settings.mermaid.look.neo"),
 }
 
 enum class MermaidFontFamily(val cssValue: String?, val displayKey: String) {
