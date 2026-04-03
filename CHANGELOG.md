@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.5.1] - 2026-04-03
+
+- Update Mermaid.js to v11.14.0 with new diagram types and reliability improvements (#10)
+
 ## [1.5.0] - 2026-03-31
 
 - Add code intelligence — completion, inspections, navigation, and code folding (#9)
