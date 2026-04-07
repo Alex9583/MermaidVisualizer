@@ -96,11 +96,9 @@
                 if (toolbar) container.shadowRoot.appendChild(toolbar);
                 if (window.__initMermaidZoom) {
                     window.__initMermaidZoom(container.shadowRoot, {
-                        fitMode: 'width',
-                        fixedFitScale: 1.03,
+                        layoutMode: 'inline',
                         toolbarEl: container.shadowRoot.querySelector('.mermaid-export-toolbar'),
-                        wheelRequiresModifier: true,
-                        constrainSvg: false
+                        wheelRequiresModifier: true
                     });
                 }
             } else {
