@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.5.2] - 2026-04-07
+
+- Fix Mermaid diagram rendering on markdown preview (#11)
+
 ## [1.5.1] - 2026-04-03
 
 - Update Mermaid.js to v11.14.0 with new diagram types and reliability improvements (#10)
