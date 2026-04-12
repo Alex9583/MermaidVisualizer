@@ -125,6 +125,12 @@ svg {
     display: inline-block;
 }
 
+/* During active pan: promote to own GPU layer to prevent ghost artifacts on some platforms.
+   Applied dynamically by JS (mousedown/mouseup) — NOT permanent, to avoid blurry rasterization at high zoom. */
+.mermaid-zoom-content.panning {
+    will-change: transform;
+}
+
 /* Override: inside unconstrained zoom viewport, SVG should not be width-limited */
 .mermaid-zoom-viewport.unconstrained svg { max-width: none; }
 

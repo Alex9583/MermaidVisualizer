@@ -232,6 +232,7 @@
         state.panStartX = e.clientX - state.panX;
         state.panStartY = e.clientY - state.panY;
         state.viewportEl.classList.add('panning');
+        state.contentEl.classList.add('panning');
         e.preventDefault();
     }
 
@@ -246,6 +247,7 @@
         if (!state.isPanning) return;
         state.isPanning = false;
         state.viewportEl.classList.remove('panning');
+        state.contentEl.classList.remove('panning');
     }
 
     // --- Double-click: toggle fit <-> actual size ---
