@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.5.4] - 2026-05-13
+
+- Preserve zoom, pan, and mode across re-renders in standalone Mermaid diagrams (#14)
+
 ## [1.5.3] - 2026-04-12
 
 - Add dynamic GPU layer promotion during active panning in Mermaid zoom (#12)
