@@ -172,6 +172,42 @@ class MermaidZoomJsTest {
         fun `handles keyboard shortcuts`() {
             assertTrue(jsContent.contains("keydown"), "Should handle keyboard shortcuts")
         }
+
+        @Test
+        fun `preserves scale across re-renders`() {
+            assertTrue(
+                jsContent.contains("preservedState"),
+                "Should capture previous state under a 'preservedState' binding before tear-down"
+            )
+            assertTrue(
+                jsContent.contains("preservedState.scale"),
+                "Should restore the previous scale onto the new state on re-init"
+            )
+        }
+
+        @Test
+        fun `preserves pan across re-renders`() {
+            assertTrue(
+                jsContent.contains("preservedState.panX"),
+                "Should restore the previous panX onto the new state on re-init"
+            )
+            assertTrue(
+                jsContent.contains("preservedState.panY"),
+                "Should restore the previous panY onto the new state on re-init"
+            )
+        }
+
+        @Test
+        fun `preserves mode and re-fits when previous mode was fit`() {
+            assertTrue(
+                jsContent.contains("preservedState.mode"),
+                "Should restore (or branch on) the previous zoom mode on re-init"
+            )
+            assertTrue(
+                Regex("preservedState\\.mode\\s*===\\s*'fit'").containsMatchIn(jsContent),
+                "Should branch on previous mode === 'fit' to recompute fit for the new diagram dimensions"
+            )
+        }
     }
 
     // ====== Inline mode ======

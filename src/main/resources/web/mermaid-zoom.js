@@ -324,7 +324,7 @@
 
     // ====== Standalone Mode ======
 
-    function initStandaloneZoom(shadowRoot, options) {
+    function initStandaloneZoom(shadowRoot, options, preservedState) {
         const fitMode = (options && options.fitMode) || 'fit';
         const toolbarEl = (options && options.toolbarEl) || null;
         const wheelRequiresModifier = (options && options.wheelRequiresModifier) || false;
@@ -374,7 +374,21 @@
             });
         }
 
-        applyTransform(state);
+        // Restore zoom across re-renders: same shadowRoot persists between renders of a
+        // standalone .mmd/.mermaid file, so the user's zoom/pan position should survive
+        // edits. If the user was in 'fit' mode, recompute fit for the new diagram dimensions
+        // rather than freezing the old fit scale.
+        if (preservedState && preservedState.mode === 'fit') {
+            fitToWindow(state);
+        } else if (preservedState) {
+            state.scale = preservedState.scale;
+            state.panX = preservedState.panX;
+            state.panY = preservedState.panY;
+            state.mode = preservedState.mode;
+            applyTransform(state);
+        } else {
+            applyTransform(state);
+        }
 
         attachViewportListeners(wrapped.viewport, state);
 
@@ -536,9 +550,19 @@
     window.__initMermaidZoom = function (shadowRoot, options) {
         if (!shadowRoot) return;
 
-        // Tear down previous instance for this shadowRoot (prevents listener accumulation on re-render)
+        // Tear down previous instance for this shadowRoot (prevents listener accumulation on re-render).
+        // Capture scale/pan/mode first so the user's zoom survives the re-render (standalone only —
+        // for inline mode the host element is recreated by IncrementalDOM, so the WeakMap miss naturally
+        // skips preservation).
+        let preservedState = null;
         const prev = stateMap.get(shadowRoot);
         if (prev) {
+            preservedState = {
+                scale: prev.scale,
+                panX: prev.panX,
+                panY: prev.panY,
+                mode: prev.mode
+            };
             if (prev.resizeObserver) prev.resizeObserver.disconnect();
             if (prev.keydownHandler) document.removeEventListener('keydown', prev.keydownHandler);
         }
@@ -546,7 +570,7 @@
         if (options && options.layoutMode === 'inline') {
             initInlineZoom(shadowRoot, options);
         } else {
-            initStandaloneZoom(shadowRoot, options);
+            initStandaloneZoom(shadowRoot, options, preservedState);
         }
     };
 
