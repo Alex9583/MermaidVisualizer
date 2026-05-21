@@ -20,6 +20,7 @@ class MermaidCompletionDataTest {
             "zenuml", "kanban", "block-beta", "packet-beta",
             "architecture-beta", "venn-beta", "ishikawa-beta",
             "wardley-beta", "treeView-beta", "treemap-beta",
+            "eventmodeling", "radar-beta",
         )
         val actual = MermaidDiagramKind.entries.map { it.keyword }.toSet()
         assertEquals(expectedKeywords, actual)
@@ -129,6 +130,25 @@ class MermaidCompletionDataTest {
             MermaidCompletionData.keywordsFor(MermaidDiagramKind.FLOWCHART),
             MermaidCompletionData.keywordsFor(MermaidDiagramKind.GRAPH),
         )
+    }
+
+    @Test
+    fun testRadarKeywordsContainExpected() {
+        val keywords = MermaidCompletionData.keywordsFor(MermaidDiagramKind.RADAR)
+        assertTrue(keywords.containsAll(setOf(
+            "title", "axis", "curve", "showLegend",
+            "max", "min", "graticule", "ticks",
+        )))
+    }
+
+    @Test
+    fun testEventModelingKeywordsContainExpected() {
+        val keywords = MermaidCompletionData.keywordsFor(MermaidDiagramKind.EVENT_MODELING)
+        assertTrue(keywords.containsAll(setOf(
+            "tf", "timeframe", "rf", "resetframe", "data",
+            "ui", "pcr", "processor", "cmd", "command",
+            "rmo", "readmodel", "evt", "event",
+        )))
     }
 
     @Test
