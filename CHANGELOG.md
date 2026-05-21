@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.6.0] - 2026-05-21
+
+- Update Mermaid.js to v11.15.0 with new diagram types and reliability improvements (#15)
+
 ## [1.5.4] - 2026-05-13
 
 - Preserve zoom, pan, and mode across re-renders in standalone Mermaid diagrams (#14)
