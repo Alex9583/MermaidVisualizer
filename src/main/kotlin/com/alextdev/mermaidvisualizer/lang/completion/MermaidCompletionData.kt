@@ -45,6 +45,8 @@ enum class MermaidDiagramKind(val keyword: String, val displayKey: String) {
     WARDLEY("wardley-beta", "completion.mermaid.diagram.wardley"),
     TREEVIEW("treeView-beta", "completion.mermaid.diagram.treeview"),
     TREEMAP("treemap-beta", "completion.mermaid.diagram.treemap"),
+    EVENT_MODELING("eventmodeling", "completion.mermaid.diagram.eventModeling"),
+    RADAR("radar-beta", "completion.mermaid.diagram.radar"),
 }
 
 /**
@@ -149,6 +151,17 @@ object MermaidCompletionData {
 
     private val KANBAN_KEYWORDS = setOf("title", "section")
 
+    private val EVENT_MODELING_KEYWORDS = setOf(
+        "tf", "timeframe", "rf", "resetframe", "data",
+        "ui", "pcr", "processor", "cmd", "command",
+        "rmo", "readmodel", "evt", "event",
+    )
+
+    private val RADAR_KEYWORDS = setOf(
+        "title", "axis", "curve", "showLegend",
+        "max", "min", "graticule", "ticks",
+    )
+
     private val KEYWORDS_BY_KIND: Map<MermaidDiagramKind, Set<String>> by lazy {
         val map = mapOf(
             MermaidDiagramKind.FLOWCHART to FLOWCHART_KEYWORDS,
@@ -183,6 +196,8 @@ object MermaidCompletionData {
             MermaidDiagramKind.WARDLEY to WARDLEY_KEYWORDS,
             MermaidDiagramKind.TREEVIEW to emptySet(),
             MermaidDiagramKind.TREEMAP to emptySet(),
+            MermaidDiagramKind.EVENT_MODELING to EVENT_MODELING_KEYWORDS,
+            MermaidDiagramKind.RADAR to RADAR_KEYWORDS,
         )
         val missing = MermaidDiagramKind.entries.toSet() - map.keys
         check(missing.isEmpty()) { "KEYWORDS_BY_KIND missing entries for: $missing" }
@@ -235,6 +250,8 @@ object MermaidCompletionData {
         MermaidDiagramKind.ISHIKAWA,
         MermaidDiagramKind.TREEVIEW,
         MermaidDiagramKind.TREEMAP,
+        MermaidDiagramKind.EVENT_MODELING,
+        MermaidDiagramKind.RADAR,
         -> emptySet()
         MermaidDiagramKind.WARDLEY -> setOf("pipeline")
     }
@@ -273,6 +290,8 @@ object MermaidCompletionData {
         MermaidDiagramKind.WARDLEY,
         MermaidDiagramKind.TREEVIEW,
         MermaidDiagramKind.TREEMAP,
+        MermaidDiagramKind.EVENT_MODELING,
+        MermaidDiagramKind.RADAR,
         -> emptySet()
     }
 
@@ -364,6 +383,8 @@ object MermaidCompletionData {
             MermaidDiagramKind.WARDLEY to emptyList(),
             MermaidDiagramKind.TREEVIEW to emptyList(),
             MermaidDiagramKind.TREEMAP to emptyList(),
+            MermaidDiagramKind.EVENT_MODELING to emptyList(),
+            MermaidDiagramKind.RADAR to emptyList(),
         )
         val missing = MermaidDiagramKind.entries.toSet() - map.keys
         check(missing.isEmpty()) { "ARROWS_BY_KIND missing entries for: $missing" }

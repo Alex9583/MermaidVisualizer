@@ -50,6 +50,12 @@ import static com.intellij.psi.TokenType.*;
         "set", "union",
         // Wardley
         "component", "pipeline", "evolve", "evolution", "size", "anchor", "source",
+        // Event Modeling
+        "tf", "timeframe", "rf", "resetframe", "data",
+        "ui", "pcr", "processor", "cmd", "command",
+        "rmo", "readmodel", "evt", "event",
+        // Radar
+        "axis", "curve", "showLegend", "max", "min", "graticule", "ticks",
         // Requirement diagram
         "element", "requirement", "functionalRequirement", "interfaceRequirement",
         "performanceRequirement", "designConstraint",
@@ -132,7 +138,9 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
     | "ishikawa-beta"
     | "wardley-beta"
     | "treeView-beta"
-    | "treemap-beta"               { yybegin(NORMAL); return DIAGRAM_TYPE; }
+    | "treemap-beta"
+    | "eventmodeling"
+    | "radar-beta"                 { yybegin(NORMAL); return DIAGRAM_TYPE; }
 
     "---"                           { yybegin(FRONTMATTER); return DIRECTIVE; }
 

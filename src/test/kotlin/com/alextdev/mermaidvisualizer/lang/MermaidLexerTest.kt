@@ -58,6 +58,13 @@ class MermaidLexerTest {
     }
 
     @Test
+    fun testSinglePercentIsNotComment() {
+        val tokens = nonWhitespaceTokens("% not a comment")
+        assertFalse(tokens.any { it.first == MermaidTokenTypes.COMMENT },
+            "Single % must never produce a COMMENT token (got: $tokens)")
+    }
+
+    @Test
     fun testDirective() {
         val tokens = nonWhitespaceTokens("%%{init: {'theme': 'dark'}}%%")
         assertTrue(tokens.all { it.first == MermaidTokenTypes.DIRECTIVE })
@@ -82,7 +89,8 @@ class MermaidLexerTest {
         "C4Component", "C4Dynamic", "C4Deployment", "zenuml",
         "kanban", "block-beta", "packet-beta", "architecture-beta",
         "venn-beta", "ishikawa-beta",
-        "wardley-beta", "treeView-beta", "treemap-beta"
+        "wardley-beta", "treeView-beta", "treemap-beta",
+        "eventmodeling", "radar-beta"
     ])
     fun testDiagramTypeAtLineStart(diagramType: String) {
         val tokens = nonWhitespaceTokens(diagramType)
@@ -391,6 +399,12 @@ class MermaidLexerTest {
         "set", "union",
         // Wardley
         "component", "pipeline", "evolve", "evolution", "size", "anchor", "source",
+        // Event Modeling
+        "tf", "timeframe", "rf", "resetframe", "data",
+        "ui", "pcr", "processor", "cmd", "command",
+        "rmo", "readmodel", "evt", "event",
+        // Radar
+        "axis", "curve", "showLegend", "max", "min", "graticule", "ticks",
         // Requirement
         "element", "requirement", "functionalRequirement", "interfaceRequirement",
         "performanceRequirement", "designConstraint",
@@ -525,6 +539,48 @@ class MermaidLexerTest {
         val tokens = nonWhitespaceTokens(input)
         assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
         assertEquals("treeView-beta", tokens[0].second)
+    }
+
+    @Test
+    fun testEventModelingDiagramSnippet() {
+        val input = """
+            eventmodeling
+
+            tf 01 ui CartUI
+            tf 02 cmd AddItem
+            tf 03 evt ItemAdded
+            tf 04 rmo CartView ->> 03
+        """.trimIndent()
+        val tokens = nonWhitespaceTokens(input)
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals("eventmodeling", tokens[0].second)
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "tf" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "ui" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "cmd" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "evt" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "rmo" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.ARROW && it.second == "->>" })
+    }
+
+    @Test
+    fun testRadarDiagramSnippet() {
+        val input = """
+            radar-beta
+              title Product Performance
+              axis A, B, C, D, E
+              curve Product1{1, 2, 3, 4, 5}
+              showLegend true
+              max 10
+              ticks 5
+        """.trimIndent()
+        val tokens = nonWhitespaceTokens(input)
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals("radar-beta", tokens[0].second)
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "axis" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "curve" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "showLegend" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "max" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "ticks" })
     }
 
     @Test

@@ -62,6 +62,11 @@ sourceSets {
     }
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
@@ -73,6 +78,8 @@ tasks.test {
 }
 
 tasks.register<org.jetbrains.grammarkit.tasks.GenerateParserTask>("generateMermaidParser") {
+    group = "mermaid"
+    description = "Regenerates the Grammar-Kit parser + PSI sources from Mermaid.bnf"
     sourceFile.set(file("src/main/grammars/Mermaid.bnf"))
     targetRootOutputDir.set(file("src/main/gen"))
     pathToParser.set("com/alextdev/mermaidvisualizer/lang/parser/MermaidParser.java")
@@ -81,6 +88,8 @@ tasks.register<org.jetbrains.grammarkit.tasks.GenerateParserTask>("generateMerma
 }
 
 tasks.register<org.jetbrains.grammarkit.tasks.GenerateLexerTask>("generateMermaidLexer") {
+    group = "mermaid"
+    description = "Regenerates the JFlex lexer from Mermaid.flex (depends on generateMermaidParser)"
     dependsOn("generateMermaidParser")
     sourceFile.set(file("src/main/grammars/Mermaid.flex"))
     targetOutputDir.set(file("src/main/gen/com/alextdev/mermaidvisualizer/lang"))

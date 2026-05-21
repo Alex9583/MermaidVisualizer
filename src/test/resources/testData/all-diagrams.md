@@ -1,6 +1,6 @@
 # All Mermaid Diagram Types
 
-Test file covering all 27+ Mermaid diagram types for manual and automated verification.
+Test file covering all 29+ Mermaid diagram types for manual and automated verification.
 
 ## 1. Flowchart
 
@@ -366,6 +366,34 @@ treemap-beta
     "Clothing"
         "Men's": 40
         "Women's": 40
+```
+
+## 28. Event Modeling
+
+```mermaid
+eventmodeling
+
+tf 01 ui CartUI
+tf 02 cmd AddItem
+tf 03 evt ItemAdded
+tf 04 rmo CartView ->> 03
+
+data AddItem01 `json`{
+  "itemId": "123"
+}
+```
+
+## 29. Radar Chart (beta)
+
+```mermaid
+radar-beta
+  title Product Performance
+  axis A, B, C, D, E
+  curve Product1{1, 2, 3, 4, 5}
+  curve Product2{5, 4, 3, 2, 1}
+  showLegend true
+  max 10
+  ticks 5
 ```
 
 ---
