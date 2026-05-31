@@ -37,7 +37,7 @@ class MermaidZoomJsTest {
         @Test
         fun `clamps scale to min and max`() {
             assertTrue(jsContent.contains("0.1"), "Should have minimum scale of 0.1")
-            assertTrue(jsContent.contains("5.0"), "Should have maximum scale of 5.0")
+            assertTrue(jsContent.contains("10.0"), "Should have maximum scale of 10.0")
         }
 
         @Test
