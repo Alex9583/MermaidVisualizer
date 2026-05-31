@@ -12,7 +12,7 @@
     // ====== Constants ======
 
     const MIN_SCALE = 0.1;
-    const MAX_SCALE = 5.0;
+    const MAX_SCALE = 10.0;
     const ZOOM_FACTOR = 1.25;
 
     // Per-shadowRoot state stored in a WeakMap
