@@ -27,7 +27,7 @@ IntelliJ plugin for [Mermaid](https://mermaid.js.org/) diagrams — live preview
 - **Render error annotations** — Mermaid.js parsing errors surfaced directly in the editor
 
 ### Settings
-- Settings page (Settings > Tools > Mermaid) — theme, look (classic/hand-drawn), font family, max text size, live reload delay
+- Settings page (Settings > Tools > Mermaid) — theme, look (classic/hand-drawn), font family, max text size, live reload delay, max preview height
 
 ## Requirements
 

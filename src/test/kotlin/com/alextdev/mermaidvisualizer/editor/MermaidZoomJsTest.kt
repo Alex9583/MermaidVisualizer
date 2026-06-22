@@ -316,5 +316,37 @@ class MermaidZoomJsTest {
                 "Inline ResizeObserver should track width to avoid infinite loops from height changes"
             )
         }
+
+        @Test
+        fun `derives maxHeightFraction from maxHeightPercent option`() {
+            assertTrue(
+                jsContent.contains("options.maxHeightPercent"),
+                "Inline mode should read the maxHeightPercent option"
+            )
+            assertTrue(
+                jsContent.contains("maxHeightFraction"),
+                "Inline mode should derive a maxHeightFraction from the percent option"
+            )
+            assertTrue(
+                jsContent.contains("options.maxHeightPercent / 100"),
+                "maxHeightPercent should be converted from a percent to a 0-1 fraction"
+            )
+        }
+
+        @Test
+        fun `falls back to 0_6 fraction when maxHeightPercent absent`() {
+            assertTrue(
+                Regex(":\\s*0\\.6").containsMatchIn(jsContent),
+                "Inline mode should fall back to 0.6 (60%) when no maxHeightPercent is provided"
+            )
+        }
+
+        @Test
+        fun `caps viewport height using maxHeightFraction`() {
+            assertTrue(
+                jsContent.contains("window.innerHeight * maxHeightFraction"),
+                "Viewport height cap should use the configurable maxHeightFraction"
+            )
+        }
     }
 }

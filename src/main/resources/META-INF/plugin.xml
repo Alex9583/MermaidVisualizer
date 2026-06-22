@@ -30,7 +30,7 @@
         </ul>
 
         <h2>Settings</h2>
-        <p>Configurable via <code>Settings &gt; Tools &gt; Mermaid</code> — theme, look (classic/hand-drawn), font family, max text size, live reload delay.</p>
+        <p>Configurable via <code>Settings &gt; Tools &gt; Mermaid</code> — theme, look (classic/hand-drawn), font family, max text size, live reload delay, max preview height.</p>
         <p>Customizable colors via <code>Settings &gt; Editor &gt; Color Scheme &gt; Mermaid</code>.</p>
 
         <h2>Usage</h2>
