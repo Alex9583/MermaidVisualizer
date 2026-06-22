@@ -19,6 +19,7 @@ internal class MermaidSettingsConfigurable : Configurable {
     private var fontFamilySelection: MermaidFontFamily? = MermaidFontFamily.DEFAULT
     private var maxTextSizeText: String = DEFAULT_MAX_TEXT_SIZE.toString()
     private var debounceMsText: String = DEFAULT_DEBOUNCE_MS.toString()
+    private var maxHeightPercentText: String = DEFAULT_MAX_HEIGHT_PERCENT.toString()
 
     private var dialogPanel: DialogPanel? = null
 
@@ -87,6 +88,21 @@ internal class MermaidSettingsConfigurable : Configurable {
                         }
                         .comment(MyMessageBundle.message("settings.mermaid.debounce.comment"))
                 }
+                row(MyMessageBundle.message("settings.mermaid.maxHeightPercent.label")) {
+                    textField()
+                        .bindText(::maxHeightPercentText)
+                        .columns(6)
+                        .validationOnInput {
+                            val value = it.text.trim().toIntOrNull()
+                            when {
+                                value == null -> error(MyMessageBundle.message("settings.mermaid.validation.notANumber"))
+                                value !in MIN_MAX_HEIGHT_PERCENT..MAX_MAX_HEIGHT_PERCENT ->
+                                    warning(MyMessageBundle.message("settings.mermaid.maxHeightPercent.outOfRange"))
+                                else -> null
+                            }
+                        }
+                        .comment(MyMessageBundle.message("settings.mermaid.maxHeightPercent.comment"))
+                }
             }
         }
         dialogPanel = p
@@ -101,7 +117,8 @@ internal class MermaidSettingsConfigurable : Configurable {
             (lookSelection ?: MermaidLook.CLASSIC) != state.look ||
             (fontFamilySelection ?: MermaidFontFamily.DEFAULT) != state.fontFamily ||
             parseMaxTextSize() != state.maxTextSize ||
-            parseDebounceMs() != state.debounceMs
+            parseDebounceMs() != state.debounceMs ||
+            parseMaxHeightPercent() != state.maxHeightPercent
     }
 
     override fun apply() {
@@ -114,10 +131,12 @@ internal class MermaidSettingsConfigurable : Configurable {
             fontFamily = fontFamilySelection ?: MermaidFontFamily.DEFAULT,
             maxTextSize = parseMaxTextSize(),
             debounceMs = parseDebounceMs(),
+            maxHeightPercent = parseMaxHeightPercent(),
         )
         settings.loadState(newState)
         maxTextSizeText = settings.state.maxTextSize.toString()
         debounceMsText = settings.state.debounceMs.toString()
+        maxHeightPercentText = settings.state.maxHeightPercent.toString()
         if (settings.state != oldState) {
             ApplicationManager.getApplication().messageBus
                 .syncPublisher(MERMAID_SETTINGS_TOPIC)
@@ -137,6 +156,7 @@ internal class MermaidSettingsConfigurable : Configurable {
         fontFamilySelection = state.fontFamily
         maxTextSizeText = state.maxTextSize.toString()
         debounceMsText = state.debounceMs.toString()
+        maxHeightPercentText = state.maxHeightPercent.toString()
     }
 
     private fun parseMaxTextSize(): Int {
@@ -147,5 +167,10 @@ internal class MermaidSettingsConfigurable : Configurable {
     private fun parseDebounceMs(): Long {
         val raw = debounceMsText.trim().toLongOrNull() ?: DEFAULT_DEBOUNCE_MS
         return clampDebounceMs(raw)
+    }
+
+    private fun parseMaxHeightPercent(): Int {
+        val raw = maxHeightPercentText.trim().toIntOrNull() ?: DEFAULT_MAX_HEIGHT_PERCENT
+        return clampMaxHeightPercent(raw)
     }
 }

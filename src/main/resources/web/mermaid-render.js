@@ -98,7 +98,8 @@
                     window.__initMermaidZoom(container.shadowRoot, {
                         layoutMode: 'inline',
                         toolbarEl: container.shadowRoot.querySelector('.mermaid-export-toolbar'),
-                        wheelRequiresModifier: true
+                        wheelRequiresModifier: true,
+                        maxHeightPercent: (window.__MERMAID_CONFIG && window.__MERMAID_CONFIG.maxHeightPercent) || 60
                     });
                 }
             } else {

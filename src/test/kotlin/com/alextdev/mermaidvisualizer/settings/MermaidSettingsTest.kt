@@ -24,6 +24,7 @@ class MermaidSettingsTest {
         assertEquals(MermaidFontFamily.DEFAULT, state.fontFamily)
         assertEquals(DEFAULT_MAX_TEXT_SIZE, state.maxTextSize)
         assertEquals(DEFAULT_DEBOUNCE_MS, state.debounceMs)
+        assertEquals(DEFAULT_MAX_HEIGHT_PERCENT, state.maxHeightPercent)
     }
 
     @Test
@@ -64,6 +65,7 @@ class MermaidSettingsTest {
         assertFalse(json.contains("\"fontFamily\""), "Default fontFamily should be omitted")
         assertTrue(json.contains("\"look\":\"classic\""))
         assertTrue(json.contains("\"maxTextSize\":100000"))
+        assertTrue(json.contains("\"maxHeightPercent\":60"))
     }
 
     @Test
@@ -119,6 +121,18 @@ class MermaidSettingsTest {
     }
 
     @Test
+    fun `loadState clamps maxHeightPercent below minimum`() {
+        settings.loadState(MermaidSettings.State(maxHeightPercent = 5))
+        assertEquals(MIN_MAX_HEIGHT_PERCENT, settings.state.maxHeightPercent)
+    }
+
+    @Test
+    fun `loadState clamps maxHeightPercent above maximum`() {
+        settings.loadState(MermaidSettings.State(maxHeightPercent = 250))
+        assertEquals(MAX_MAX_HEIGHT_PERCENT, settings.state.maxHeightPercent)
+    }
+
+    @Test
     fun `MermaidFontFamily enum has correct cssValues`() {
         assertNull(MermaidFontFamily.DEFAULT.cssValue)
         assertEquals("Arial", MermaidFontFamily.ARIAL.cssValue)
@@ -138,6 +152,7 @@ class MermaidSettingsTest {
             fontFamily = MermaidFontFamily.GEORGIA,
             maxTextSize = 50_000,
             debounceMs = 500,
+            maxHeightPercent = 40,
         )
         settings.loadState(original)
         val loaded = settings.state
@@ -146,6 +161,7 @@ class MermaidSettingsTest {
         assertEquals(MermaidFontFamily.GEORGIA, loaded.fontFamily)
         assertEquals(50_000, loaded.maxTextSize)
         assertEquals(500L, loaded.debounceMs)
+        assertEquals(40, loaded.maxHeightPercent)
     }
 
     @Test

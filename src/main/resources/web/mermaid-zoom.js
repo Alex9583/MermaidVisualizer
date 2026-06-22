@@ -418,12 +418,15 @@
     // Uses the SAME transform-based zoom/pan/fit as standalone.
     // Computes explicit viewport height because the host element in Markdown has no defined height
     // (unlike standalone's CSS 100vh). Two-phase sizing:
-    //   1. Cap proportional height at 60% of window (prevents diagram from dominating text)
+    //   1. Cap proportional height at maxHeightPercent of window (default 60%; prevents diagram from dominating text)
     //   2. After layout, expand if the page has available space (diagram-only fills the window)
 
     function initInlineZoom(shadowRoot, options) {
         const toolbarEl = (options && options.toolbarEl) || null;
         const wheelRequiresModifier = (options && options.wheelRequiresModifier) || false;
+        const maxHeightFraction =
+            (options && typeof options.maxHeightPercent === 'number' && options.maxHeightPercent > 0)
+                ? options.maxHeightPercent / 100 : 0.6;
 
         // Read SVG intrinsic dimensions before wrapping (needed for height computation)
         const tempSvg = shadowRoot.querySelector('svg');
@@ -435,13 +438,13 @@
         const wrapped = wrapInZoomViewport(shadowRoot);
         if (!wrapped) return;
 
-        // Phase 1: set viewport height from SVG proportions, capped at 60% of window.
+        // Phase 1: set viewport height from SVG proportions, capped at maxHeightFraction of window.
         // This ensures the diagram is contained when text surrounds it.
         function computeViewportHeight() {
             const vw = wrapped.viewport.clientWidth;
             if (vw <= 0 || intrinsic.width <= 0) return;
             const proportionalHeight = intrinsic.height * (vw / intrinsic.width);
-            const maxHeight = Math.max(300, window.innerHeight * 0.6);
+            const maxHeight = Math.max(300, window.innerHeight * maxHeightFraction);
             wrapped.viewport.style.height = Math.min(proportionalHeight, maxHeight) + 'px';
         }
 

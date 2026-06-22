@@ -7,14 +7,18 @@ import com.intellij.openapi.components.Storage
 
 internal const val DEFAULT_MAX_TEXT_SIZE = 100_000
 internal const val DEFAULT_DEBOUNCE_MS = 300L
+internal const val DEFAULT_MAX_HEIGHT_PERCENT = 60
 
 internal const val MIN_MAX_TEXT_SIZE = 1_000
 internal const val MAX_MAX_TEXT_SIZE = 10_000_000
 internal const val MIN_DEBOUNCE_MS = 0L
 internal const val MAX_DEBOUNCE_MS = 5_000L
+internal const val MIN_MAX_HEIGHT_PERCENT = 20
+internal const val MAX_MAX_HEIGHT_PERCENT = 100
 
 internal fun clampMaxTextSize(value: Int): Int = value.coerceIn(MIN_MAX_TEXT_SIZE, MAX_MAX_TEXT_SIZE)
 internal fun clampDebounceMs(value: Long): Long = value.coerceIn(MIN_DEBOUNCE_MS, MAX_DEBOUNCE_MS)
+internal fun clampMaxHeightPercent(value: Int): Int = value.coerceIn(MIN_MAX_HEIGHT_PERCENT, MAX_MAX_HEIGHT_PERCENT)
 
 private fun jsonEscape(s: String): String = s
     .replace("\\", "\\\\")
@@ -30,10 +34,12 @@ internal class MermaidSettings : PersistentStateComponent<MermaidSettings.State>
         var fontFamily: MermaidFontFamily = MermaidFontFamily.DEFAULT,
         var maxTextSize: Int = DEFAULT_MAX_TEXT_SIZE,
         var debounceMs: Long = DEFAULT_DEBOUNCE_MS,
+        var maxHeightPercent: Int = DEFAULT_MAX_HEIGHT_PERCENT,
     ) {
         init {
             maxTextSize = maxTextSize.coerceIn(MIN_MAX_TEXT_SIZE, MAX_MAX_TEXT_SIZE)
             debounceMs = debounceMs.coerceIn(MIN_DEBOUNCE_MS, MAX_DEBOUNCE_MS)
+            maxHeightPercent = maxHeightPercent.coerceIn(MIN_MAX_HEIGHT_PERCENT, MAX_MAX_HEIGHT_PERCENT)
         }
     }
 
@@ -45,6 +51,7 @@ internal class MermaidSettings : PersistentStateComponent<MermaidSettings.State>
         myState = state.copy(
             maxTextSize = state.maxTextSize.coerceIn(MIN_MAX_TEXT_SIZE, MAX_MAX_TEXT_SIZE),
             debounceMs = state.debounceMs.coerceIn(MIN_DEBOUNCE_MS, MAX_DEBOUNCE_MS),
+            maxHeightPercent = state.maxHeightPercent.coerceIn(MIN_MAX_HEIGHT_PERCENT, MAX_MAX_HEIGHT_PERCENT),
         )
     }
 
@@ -63,6 +70,8 @@ internal class MermaidSettings : PersistentStateComponent<MermaidSettings.State>
         append(jsonEscape(myState.look.jsValue))
         append("\",\"maxTextSize\":")
         append(myState.maxTextSize)
+        append(",\"maxHeightPercent\":")
+        append(myState.maxHeightPercent)
         val font = myState.fontFamily
         if (font.cssValue != null) {
             append(",\"fontFamily\":\"")
