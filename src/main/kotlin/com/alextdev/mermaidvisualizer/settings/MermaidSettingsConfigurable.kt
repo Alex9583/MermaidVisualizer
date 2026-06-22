@@ -23,6 +23,7 @@ internal class MermaidSettingsConfigurable : Configurable {
     private var fontFamilySelection: MermaidFontFamily? = MermaidFontFamily.DEFAULT
     private var maxTextSizeText: String = DEFAULT_MAX_TEXT_SIZE.toString()
     private var debounceMsText: String = DEFAULT_DEBOUNCE_MS.toString()
+    private var maxHeightPercentText: String = DEFAULT_MAX_HEIGHT_PERCENT.toString()
     private var overrideBackgroundSelection: Boolean = false
     private var backgroundColorHex: String = DEFAULT_BACKGROUND_COLOR
     private var overrideLineColorSelection: Boolean = false
@@ -103,6 +104,21 @@ internal class MermaidSettingsConfigurable : Configurable {
                         }
                         .comment(MyMessageBundle.message("settings.mermaid.debounce.comment"))
                 }
+                row(MyMessageBundle.message("settings.mermaid.maxHeightPercent.label")) {
+                    textField()
+                        .bindText(::maxHeightPercentText)
+                        .columns(6)
+                        .validationOnInput {
+                            val value = it.text.trim().toIntOrNull()
+                            when {
+                                value == null -> error(MyMessageBundle.message("settings.mermaid.validation.notANumber"))
+                                value !in MIN_MAX_HEIGHT_PERCENT..MAX_MAX_HEIGHT_PERCENT ->
+                                    warning(MyMessageBundle.message("settings.mermaid.maxHeightPercent.outOfRange"))
+                                else -> null
+                            }
+                        }
+                        .comment(MyMessageBundle.message("settings.mermaid.maxHeightPercent.comment"))
+                }
             }
             group(MyMessageBundle.message("settings.mermaid.group.colors")) {
                 row {
@@ -130,6 +146,7 @@ internal class MermaidSettingsConfigurable : Configurable {
             (fontFamilySelection ?: MermaidFontFamily.DEFAULT) != state.fontFamily ||
             parseMaxTextSize() != state.maxTextSize ||
             parseDebounceMs() != state.debounceMs ||
+            parseMaxHeightPercent() != state.maxHeightPercent ||
             overrideBackgroundSelection != state.overrideBackgroundColor ||
             currentBackgroundHex() != state.backgroundColor ||
             overrideLineColorSelection != state.overrideLineColor ||
@@ -146,6 +163,7 @@ internal class MermaidSettingsConfigurable : Configurable {
             fontFamily = fontFamilySelection ?: MermaidFontFamily.DEFAULT,
             maxTextSize = parseMaxTextSize(),
             debounceMs = parseDebounceMs(),
+            maxHeightPercent = parseMaxHeightPercent(),
             overrideBackgroundColor = overrideBackgroundSelection,
             backgroundColor = currentBackgroundHex(),
             overrideLineColor = overrideLineColorSelection,
@@ -154,6 +172,7 @@ internal class MermaidSettingsConfigurable : Configurable {
         settings.loadState(newState)
         maxTextSizeText = settings.state.maxTextSize.toString()
         debounceMsText = settings.state.debounceMs.toString()
+        maxHeightPercentText = settings.state.maxHeightPercent.toString()
         backgroundColorHex = settings.state.backgroundColor
         lineColorHex = settings.state.lineColor
         if (settings.state != oldState) {
@@ -175,6 +194,7 @@ internal class MermaidSettingsConfigurable : Configurable {
         fontFamilySelection = state.fontFamily
         maxTextSizeText = state.maxTextSize.toString()
         debounceMsText = state.debounceMs.toString()
+        maxHeightPercentText = state.maxHeightPercent.toString()
         overrideBackgroundSelection = state.overrideBackgroundColor
         backgroundColorHex = state.backgroundColor
         overrideLineColorSelection = state.overrideLineColor
@@ -207,5 +227,10 @@ internal class MermaidSettingsConfigurable : Configurable {
     private fun parseDebounceMs(): Long {
         val raw = debounceMsText.trim().toLongOrNull() ?: DEFAULT_DEBOUNCE_MS
         return clampDebounceMs(raw)
+    }
+
+    private fun parseMaxHeightPercent(): Int {
+        val raw = maxHeightPercentText.trim().toIntOrNull() ?: DEFAULT_MAX_HEIGHT_PERCENT
+        return clampMaxHeightPercent(raw)
     }
 }
