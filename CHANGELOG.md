@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.8.0] - 2026-06-22
+
+- Add custom background/line colors and configurable canvas height (#18)
+
 ## [1.7.0] - 2026-05-31
 
 - Increase maximum zoom scale to 10.0 in Mermaid diagrams (#16)
