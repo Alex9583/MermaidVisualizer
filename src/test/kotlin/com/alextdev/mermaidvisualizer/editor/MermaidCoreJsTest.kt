@@ -81,6 +81,22 @@ class MermaidCoreJsTest {
     }
 
     @Test
+    fun `core js initMermaid applies custom line color via themeVariables`() {
+        assertTrue(jsContent.contains("cfg.lineColor"), "initMermaid should read cfg.lineColor")
+        assertTrue(jsContent.contains("themeVariables"), "Custom line color should be applied via themeVariables")
+        assertTrue(jsContent.contains("opts.themeVariables.lineColor"), "Should set themeVariables.lineColor")
+    }
+
+    @Test
+    fun `core js extractPng honors custom background color`() {
+        assertTrue(jsContent.contains("cfg.backgroundColor"), "extractPng should read cfg.backgroundColor")
+        assertTrue(
+            jsContent.contains("cfg.backgroundColor || (isDarkFn()"),
+            "Custom background should take precedence over the theme-derived default"
+        )
+    }
+
+    @Test
     fun `core js extractSvg uses XMLSerializer and xmlns`() {
         assertTrue(jsContent.contains("extractSvg"), "Should have extractSvg function")
         assertTrue(jsContent.contains("XMLSerializer"), "Should use XMLSerializer to serialize SVG")

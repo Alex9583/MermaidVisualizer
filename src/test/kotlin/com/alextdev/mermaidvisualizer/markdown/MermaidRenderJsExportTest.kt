@@ -44,6 +44,24 @@ class MermaidRenderJsExportTest {
     }
 
     @Test
+    fun `render js applies custom background color per diagram container`() {
+        assertTrue(jsContent.contains("cfg.backgroundColor"), "Should read cfg.backgroundColor")
+        assertTrue(
+            jsContent.contains("container.style.background = cfg.backgroundColor || ''"),
+            "Background should be scoped to the diagram container and cleared when no override is set"
+        )
+    }
+
+    @Test
+    fun `render js passes maxHeightPercent from config to inline zoom`() {
+        assertTrue(jsContent.contains("maxHeightPercent"), "Should pass maxHeightPercent to the zoom init")
+        assertTrue(
+            jsContent.contains("(window.__MERMAID_CONFIG && window.__MERMAID_CONFIG.maxHeightPercent) || 60"),
+            "Max preview height should be read from __MERMAID_CONFIG with a default fallback"
+        )
+    }
+
+    @Test
     fun `render js has messagePipe guard`() {
         assertTrue(jsContent.contains("__IntelliJTools"), "Should check for __IntelliJTools")
         assertTrue(jsContent.contains("messagePipe"), "Should check for messagePipe")

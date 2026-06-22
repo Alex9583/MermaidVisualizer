@@ -7,14 +7,26 @@ import com.intellij.openapi.components.Storage
 
 internal const val DEFAULT_MAX_TEXT_SIZE = 100_000
 internal const val DEFAULT_DEBOUNCE_MS = 300L
+internal const val DEFAULT_MAX_HEIGHT_PERCENT = 60
 
 internal const val MIN_MAX_TEXT_SIZE = 1_000
 internal const val MAX_MAX_TEXT_SIZE = 10_000_000
 internal const val MIN_DEBOUNCE_MS = 0L
 internal const val MAX_DEBOUNCE_MS = 5_000L
+internal const val MIN_MAX_HEIGHT_PERCENT = 20
+internal const val MAX_MAX_HEIGHT_PERCENT = 100
+
+internal const val DEFAULT_BACKGROUND_COLOR = "#FFFFFF"
+internal const val DEFAULT_LINE_COLOR = "#888888"
 
 internal fun clampMaxTextSize(value: Int): Int = value.coerceIn(MIN_MAX_TEXT_SIZE, MAX_MAX_TEXT_SIZE)
 internal fun clampDebounceMs(value: Long): Long = value.coerceIn(MIN_DEBOUNCE_MS, MAX_DEBOUNCE_MS)
+internal fun clampMaxHeightPercent(value: Int): Int = value.coerceIn(MIN_MAX_HEIGHT_PERCENT, MAX_MAX_HEIGHT_PERCENT)
+
+private val HEX_COLOR_REGEX = Regex("^#[0-9a-fA-F]{6}$")
+
+internal fun normalizeHexColor(value: String, fallback: String): String =
+    if (HEX_COLOR_REGEX.matches(value)) value.uppercase() else fallback
 
 private fun jsonEscape(s: String): String = s
     .replace("\\", "\\\\")
@@ -30,10 +42,18 @@ internal class MermaidSettings : PersistentStateComponent<MermaidSettings.State>
         var fontFamily: MermaidFontFamily = MermaidFontFamily.DEFAULT,
         var maxTextSize: Int = DEFAULT_MAX_TEXT_SIZE,
         var debounceMs: Long = DEFAULT_DEBOUNCE_MS,
+        var maxHeightPercent: Int = DEFAULT_MAX_HEIGHT_PERCENT,
+        var overrideBackgroundColor: Boolean = false,
+        var backgroundColor: String = DEFAULT_BACKGROUND_COLOR,
+        var overrideLineColor: Boolean = false,
+        var lineColor: String = DEFAULT_LINE_COLOR,
     ) {
         init {
             maxTextSize = maxTextSize.coerceIn(MIN_MAX_TEXT_SIZE, MAX_MAX_TEXT_SIZE)
             debounceMs = debounceMs.coerceIn(MIN_DEBOUNCE_MS, MAX_DEBOUNCE_MS)
+            maxHeightPercent = maxHeightPercent.coerceIn(MIN_MAX_HEIGHT_PERCENT, MAX_MAX_HEIGHT_PERCENT)
+            backgroundColor = normalizeHexColor(backgroundColor, DEFAULT_BACKGROUND_COLOR)
+            lineColor = normalizeHexColor(lineColor, DEFAULT_LINE_COLOR)
         }
     }
 
@@ -45,6 +65,7 @@ internal class MermaidSettings : PersistentStateComponent<MermaidSettings.State>
         myState = state.copy(
             maxTextSize = state.maxTextSize.coerceIn(MIN_MAX_TEXT_SIZE, MAX_MAX_TEXT_SIZE),
             debounceMs = state.debounceMs.coerceIn(MIN_DEBOUNCE_MS, MAX_DEBOUNCE_MS),
+            maxHeightPercent = state.maxHeightPercent.coerceIn(MIN_MAX_HEIGHT_PERCENT, MAX_MAX_HEIGHT_PERCENT),
         )
     }
 
@@ -63,10 +84,22 @@ internal class MermaidSettings : PersistentStateComponent<MermaidSettings.State>
         append(jsonEscape(myState.look.jsValue))
         append("\",\"maxTextSize\":")
         append(myState.maxTextSize)
+        append(",\"maxHeightPercent\":")
+        append(myState.maxHeightPercent)
         val font = myState.fontFamily
         if (font.cssValue != null) {
             append(",\"fontFamily\":\"")
             append(jsonEscape(font.cssValue))
+            append('"')
+        }
+        if (myState.overrideBackgroundColor) {
+            append(",\"backgroundColor\":\"")
+            append(normalizeHexColor(myState.backgroundColor, DEFAULT_BACKGROUND_COLOR))
+            append('"')
+        }
+        if (myState.overrideLineColor) {
+            append(",\"lineColor\":\"")
+            append(normalizeHexColor(myState.lineColor, DEFAULT_LINE_COLOR))
             append('"')
         }
         append('}')

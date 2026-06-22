@@ -100,6 +100,12 @@
             securityLevel: 'strict'
         };
         if (cfg.fontFamily) opts.fontFamily = cfg.fontFamily;
+        if (cfg.lineColor) {
+            // themeVariables.lineColor overrides the chosen theme's edge/line color.
+            // Primarily affects flowchart/graph edges; other diagram types use their own variables.
+            opts.themeVariables = opts.themeVariables || {};
+            opts.themeVariables.lineColor = cfg.lineColor;
+        }
         mermaid.initialize(opts);
     }
 
@@ -124,7 +130,7 @@
         };
     }
 
-    function createPngCanvas(width, height, scale, isDark) {
+    function createPngCanvas(width, height, scale, bgColor) {
         const canvas = document.createElement('canvas');
         canvas.width = Math.ceil(width * scale);
         canvas.height = Math.ceil(height * scale);
@@ -133,7 +139,7 @@
             console.error('[MermaidVisualizer] Failed to get 2D canvas context');
             return null;
         }
-        ctx.fillStyle = isDark ? '#2b2b2b' : '#ffffff';
+        ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         return { canvas: canvas, ctx: ctx };
     }
@@ -160,6 +166,7 @@
 
     // scale: multiplier for HiDPI output (2 = 2x resolution). Fallback 800x600 when SVG has no measured size.
     // isDarkFn: function returning boolean — abstracts theme detection per context.
+    // A custom background color (cfg.backgroundColor) takes precedence over the theme-derived default.
     function extractPng(container, scale, isDarkFn, callback) {
         const svgString = extractSvg(container);
         if (!svgString) { callback(''); return; }
@@ -167,8 +174,10 @@
         const renderedSvg = container.shadowRoot.querySelector('svg');
         if (!renderedSvg) { callback(''); return; }
 
+        const cfg = window.__MERMAID_CONFIG || {};
+        const bgColor = cfg.backgroundColor || (isDarkFn() ? '#2b2b2b' : '#ffffff');
         const dim = getSvgDimensions(renderedSvg);
-        const canvasInfo = createPngCanvas(dim.w, dim.h, scale, isDarkFn());
+        const canvasInfo = createPngCanvas(dim.w, dim.h, scale, bgColor);
         if (!canvasInfo) { callback(''); return; }
 
         const svgDataUrl = 'data:image/svg+xml;base64,' + utf8ToBase64(svgString);
