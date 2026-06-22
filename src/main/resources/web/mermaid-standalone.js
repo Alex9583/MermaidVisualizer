@@ -52,6 +52,11 @@
         }
     }
 
+    function applyBackground() {
+        const cfg = window.__MERMAID_CONFIG || {};
+        document.body.style.background = cfg.backgroundColor || '';
+    }
+
     window.renderDiagram = async function (base64Source, forceThemeRefresh, generation) {
         const container = document.getElementById('mermaid-container');
         if (!container) {
@@ -59,6 +64,8 @@
             reportRenderResult({ status: 'error', message: 'Internal error: container not found', line: null, column: null }, generation);
             return;
         }
+
+        applyBackground();
 
         const isDark = document.body.classList.contains('dark-theme');
         const autoTheme = isDark ? 'dark' : 'default';

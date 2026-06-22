@@ -87,6 +87,8 @@
 
     async function renderSingleDiagram(container, source, isDark) {
         const core = window.__mermaidCore;
+        const cfg = window.__MERMAID_CONFIG || {};
+        container.style.background = cfg.backgroundColor || '';
         const renderId = core.nextRenderId();
         try {
             const result = await mermaid.render(renderId, source);

@@ -24,6 +24,10 @@ class MermaidSettingsTest {
         assertEquals(MermaidFontFamily.DEFAULT, state.fontFamily)
         assertEquals(DEFAULT_MAX_TEXT_SIZE, state.maxTextSize)
         assertEquals(DEFAULT_DEBOUNCE_MS, state.debounceMs)
+        assertFalse(state.overrideBackgroundColor)
+        assertEquals(DEFAULT_BACKGROUND_COLOR, state.backgroundColor)
+        assertFalse(state.overrideLineColor)
+        assertEquals(DEFAULT_LINE_COLOR, state.lineColor)
     }
 
     @Test
@@ -64,6 +68,68 @@ class MermaidSettingsTest {
         assertFalse(json.contains("\"fontFamily\""), "Default fontFamily should be omitted")
         assertTrue(json.contains("\"look\":\"classic\""))
         assertTrue(json.contains("\"maxTextSize\":100000"))
+    }
+
+    @Test
+    fun `toJsConfigJson omits colors when override disabled`() {
+        settings.loadState(MermaidSettings.State(backgroundColor = "#123456", lineColor = "#abcdef"))
+        val json = settings.toJsConfigJson()
+        assertFalse(json.contains("backgroundColor"), "Background color should be omitted when override is off")
+        assertFalse(json.contains("lineColor"), "Line color should be omitted when override is off")
+    }
+
+    @Test
+    fun `toJsConfigJson includes background color when override enabled`() {
+        settings.loadState(MermaidSettings.State(overrideBackgroundColor = true, backgroundColor = "#101820"))
+        val json = settings.toJsConfigJson()
+        assertTrue(json.contains("\"backgroundColor\":\"#101820\""), "Should emit background color: $json")
+    }
+
+    @Test
+    fun `toJsConfigJson includes line color when override enabled`() {
+        settings.loadState(MermaidSettings.State(overrideLineColor = true, lineColor = "#FF8800"))
+        val json = settings.toJsConfigJson()
+        assertTrue(json.contains("\"lineColor\":\"#FF8800\""), "Should emit line color: $json")
+    }
+
+    @Test
+    fun `normalizeHexColor accepts valid hex and uppercases`() {
+        assertEquals("#1A2B3C", normalizeHexColor("#1a2b3c", DEFAULT_BACKGROUND_COLOR))
+        assertEquals("#FFFFFF", normalizeHexColor("#FFFFFF", DEFAULT_BACKGROUND_COLOR))
+    }
+
+    @Test
+    fun `normalizeHexColor rejects invalid input and returns fallback`() {
+        assertEquals(DEFAULT_BACKGROUND_COLOR, normalizeHexColor("not-a-color", DEFAULT_BACKGROUND_COLOR))
+        assertEquals(DEFAULT_BACKGROUND_COLOR, normalizeHexColor("#12345", DEFAULT_BACKGROUND_COLOR))
+        assertEquals(DEFAULT_BACKGROUND_COLOR, normalizeHexColor("#1234567", DEFAULT_BACKGROUND_COLOR))
+        assertEquals(DEFAULT_BACKGROUND_COLOR, normalizeHexColor("red", DEFAULT_BACKGROUND_COLOR))
+        // Injection attempt must not survive normalization
+        assertEquals(DEFAULT_BACKGROUND_COLOR, normalizeHexColor("#000\";alert(1)//", DEFAULT_BACKGROUND_COLOR))
+    }
+
+    @Test
+    fun `loadState normalizes invalid persisted colors`() {
+        settings.loadState(MermaidSettings.State(backgroundColor = "garbage", lineColor = "#zzz"))
+        assertEquals(DEFAULT_BACKGROUND_COLOR, settings.state.backgroundColor)
+        assertEquals(DEFAULT_LINE_COLOR, settings.state.lineColor)
+    }
+
+    @Test
+    fun `color state round-trip preserves values`() {
+        settings.loadState(
+            MermaidSettings.State(
+                overrideBackgroundColor = true,
+                backgroundColor = "#0A0B0C",
+                overrideLineColor = true,
+                lineColor = "#0D0E0F",
+            )
+        )
+        val loaded = settings.state
+        assertTrue(loaded.overrideBackgroundColor)
+        assertEquals("#0A0B0C", loaded.backgroundColor)
+        assertTrue(loaded.overrideLineColor)
+        assertEquals("#0D0E0F", loaded.lineColor)
     }
 
     @Test

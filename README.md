@@ -28,6 +28,7 @@ IntelliJ plugin for [Mermaid](https://mermaid.js.org/) diagrams — live preview
 
 ### Settings
 - Settings page (Settings > Tools > Mermaid) — theme, look (classic/hand-drawn), font family, max text size, live reload delay
+- **Custom rendering colors** — optionally override the visualizer background color and the line/edge color; disabled by default, so the rendering keeps following the IDE theme unless you opt in
 
 ## Requirements
 

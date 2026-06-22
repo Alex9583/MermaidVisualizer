@@ -56,6 +56,13 @@ class MermaidStandaloneJsTest {
     }
 
     @Test
+    fun `standalone js applies custom background color from config`() {
+        assertTrue(jsContent.contains("applyBackground"), "Should have applyBackground function")
+        assertTrue(jsContent.contains("document.body.style.background"), "Should set body background from config")
+        assertTrue(jsContent.contains("cfg.backgroundColor || ''"), "Should clear inline background when no override is set")
+    }
+
+    @Test
     fun `standalone js exposes scroll sync public contract`() {
         assertTrue(jsContent.contains("window.__scrollPreviewTo"), "Should expose __scrollPreviewTo for Kotlin->JS scroll sync")
         assertTrue(jsContent.contains("__mermaidScrollBridge"), "Should reference __mermaidScrollBridge for JS->Kotlin scroll sync")

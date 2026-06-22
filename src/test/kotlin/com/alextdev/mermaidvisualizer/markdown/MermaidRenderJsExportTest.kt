@@ -44,6 +44,15 @@ class MermaidRenderJsExportTest {
     }
 
     @Test
+    fun `render js applies custom background color per diagram container`() {
+        assertTrue(jsContent.contains("cfg.backgroundColor"), "Should read cfg.backgroundColor")
+        assertTrue(
+            jsContent.contains("container.style.background = cfg.backgroundColor || ''"),
+            "Background should be scoped to the diagram container and cleared when no override is set"
+        )
+    }
+
+    @Test
     fun `render js has messagePipe guard`() {
         assertTrue(jsContent.contains("__IntelliJTools"), "Should check for __IntelliJTools")
         assertTrue(jsContent.contains("messagePipe"), "Should check for messagePipe")
