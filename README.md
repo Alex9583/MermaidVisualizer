@@ -1,6 +1,26 @@
+<div align="center">
+
+<img src="src/main/resources/META-INF/pluginIcon.svg" alt="Mermaid Visualizer logo" width="96" height="96" />
+
 # Mermaid Visualizer
 
+**Mermaid diagrams in your JetBrains IDE — render, edit, and export without leaving the editor.**
+
 IntelliJ plugin for [Mermaid](https://mermaid.js.org/) diagrams — live preview, code intelligence, and export, all offline.
+
+[![JetBrains Marketplace Version](https://img.shields.io/jetbrains/plugin/v/30432.svg?label=Marketplace)](https://plugins.jetbrains.com/plugin/30432-mermaid-visualizer)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/30432.svg)](https://plugins.jetbrains.com/plugin/30432-mermaid-visualizer)
+[![Rating](https://img.shields.io/jetbrains/plugin/r/rating/30432.svg)](https://plugins.jetbrains.com/plugin/30432-mermaid-visualizer/reviews)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+[![IntelliJ Platform](https://img.shields.io/badge/IntelliJ%20Platform-2025.3+-000000?logo=intellijidea&logoColor=white)](https://plugins.jetbrains.com/docs/intellij/welcome.html)
+[![JDK](https://img.shields.io/badge/JDK-21-ED8B00?logo=openjdk&logoColor=white)](https://adoptium.net/)
+[![Build & Test](https://img.shields.io/github/actions/workflow/status/Alex9583/MermaidVisualizer/build.yml?branch=master&label=Build)](https://github.com/Alex9583/MermaidVisualizer/actions/workflows/build.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/alextdev)
+
+</div>
+
+---
 
 ## Features
 
@@ -48,6 +68,12 @@ Install from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/30
 ./gradlew verifyPlugin       # Verify plugin compatibility
 ```
 
+## Support
+
+If Mermaid Visualizer saves you time, consider supporting its development:
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-Support%20Mermaid%20Visualizer-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/alextdev)
+
 ## License
 
-Apache 2.0
+Apache 2.0 — see [LICENSE](LICENSE).
