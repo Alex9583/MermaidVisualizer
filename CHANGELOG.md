@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.11.0] - 2026-07-30
+
+- Add `mermaid-elk.js` script for ELK layout support (#26)
+
 ## [1.10.0] - 2026-07-24
 
 - Add "Open in new tab" feature for Mermaid diagrams (#24)
