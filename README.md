@@ -33,7 +33,8 @@ IntelliJ plugin for [Mermaid](https://mermaid.js.org/) diagrams — live preview
 - Scroll synchronization between the text editor and the preview
 - Automatic dark/light theme detection and switching
 - Uses the official Mermaid.js library (v11.16.0) — supports all 32+ diagram types
-- Works offline — Mermaid.js is bundled, no CDN required
+- **ELK layout support** — diagrams using `layout: elk` (and options like `elk.mergeEdges`) in their YAML frontmatter render with the bundled ELK engine
+- Works offline — Mermaid.js and the ELK layout engine are bundled, no CDN required
 
 ### Code Intelligence
 - **Syntax highlighting** — keywords, diagram types, arrows, strings, comments, punctuation
