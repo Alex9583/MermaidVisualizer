@@ -18,6 +18,7 @@ import org.intellij.plugins.markdown.ui.preview.ResourceProvider
 private val LOG = Logger.getInstance("MermaidVisualizer")
 
 private const val RES_MERMAID_JS = "mermaid.min.js"
+private const val RES_ELK_JS = "mermaid-elk.js"
 private const val RES_ZOOM_JS = "mermaid-zoom.js"
 private const val RES_CORE_JS = "mermaid-core.js"
 private const val RES_RENDER_JS = "mermaid-render.js"
@@ -27,7 +28,7 @@ private const val RES_SHADOW_CSS_INIT_JS = "mermaid-shadow-css-init.js"
 private const val RES_CONFIG_INIT_JS = "mermaid-config-init.js"
 
 private val RESOURCE_NAMES = setOf(
-    RES_MERMAID_JS, RES_ZOOM_JS, RES_CORE_JS, RES_RENDER_JS,
+    RES_MERMAID_JS, RES_ELK_JS, RES_ZOOM_JS, RES_CORE_JS, RES_RENDER_JS,
     RES_PREVIEW_CSS, RES_SHADOW_CSS, RES_SHADOW_CSS_INIT_JS,
     RES_CONFIG_INIT_JS,
 )
@@ -84,6 +85,7 @@ internal class MermaidBrowserExtension(
         get() = try {
             listOf(
                 PreviewStaticServer.getStaticUrl(this, RES_MERMAID_JS),
+                PreviewStaticServer.getStaticUrl(this, RES_ELK_JS),
                 PreviewStaticServer.getStaticUrl(this, RES_SHADOW_CSS_INIT_JS),
                 PreviewStaticServer.getStaticUrl(this, RES_CONFIG_INIT_JS),
                 PreviewStaticServer.getStaticUrl(this, RES_CORE_JS),

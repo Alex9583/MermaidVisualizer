@@ -14,6 +14,14 @@ class MermaidResourceLoadingTest {
     }
 
     @Test
+    fun `mermaid elk js is loadable and large enough`() {
+        val stream = javaClass.classLoader.getResourceAsStream("web/mermaid-elk.js")
+        assertNotNull(stream, "web/mermaid-elk.js should be on the classpath")
+        val bytes = stream!!.use { it.readBytes() }
+        assertTrue(bytes.size > 1_000_000, "mermaid-elk.js should be >1MB (got ${bytes.size})")
+    }
+
+    @Test
     fun `mermaid render js is loadable and contains expected symbols`() {
         val stream = javaClass.classLoader.getResourceAsStream("web/mermaid-render.js")
         assertNotNull(stream, "web/mermaid-render.js should be on the classpath")
