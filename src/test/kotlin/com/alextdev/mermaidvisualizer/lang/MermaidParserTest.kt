@@ -12,6 +12,7 @@ import com.alextdev.mermaidvisualizer.lang.psi.MermaidGenericDiagram
 import com.alextdev.mermaidvisualizer.lang.psi.MermaidSequenceDiagram
 import com.alextdev.mermaidvisualizer.lang.psi.MermaidStateDiagram
 import com.alextdev.mermaidvisualizer.lang.psi.MermaidStatement
+import com.intellij.psi.PsiErrorElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
@@ -277,10 +278,11 @@ class MermaidParserTest : BasePlatformTestCase() {
             "        class Fish\n" +
             "    }"
         )
-        // namespace...end is the expected pattern for parser, but classDiagram namespace
-        // also uses { } in Mermaid.js — we just verify parsing doesn't crash
         val diagram = findFirst<MermaidClassDiagram>(file)
         assertNotNull(diagram)
+        assertNoErrors(file)
+        assertTrue("namespace must not open an end-terminated block",
+            findAll<MermaidBlock>(file).isEmpty())
     }
 
     // --- Block edge cases ---
@@ -381,5 +383,116 @@ class MermaidParserTest : BasePlatformTestCase() {
         assertNotNull(diagram)
         val dividers = findAll<MermaidBlockDivider>(file)
         assertTrue("'and' in quadrant should not create dividers", dividers.isEmpty())
+    }
+
+    private fun assertNoErrors(file: MermaidFile) {
+        val errors = PsiTreeUtil.findChildrenOfType(file, PsiErrorElement::class.java)
+        assertTrue("expected no parse errors, got: ${errors.map { it.errorDescription }}", errors.isEmpty())
+    }
+
+    fun testSequenceMessageContainingAnd() {
+        val file = parseText(
+            "sequenceDiagram\n" +
+            "    participant Unit\n" +
+            "    participant Service\n" +
+            "    Unit->>Service: Start licence check and verify"
+        )
+        assertNotNull(findFirst<MermaidSequenceDiagram>(file))
+        assertNoErrors(file)
+        assertTrue("'and' in message text should not create a divider",
+            findAll<MermaidBlockDivider>(file).isEmpty())
+    }
+
+    fun testSequenceMessageContainingElse() {
+        val file = parseText("sequenceDiagram\n    A->>B: either this else that")
+        assertNoErrors(file)
+        assertTrue("'else' in message text should not create a divider",
+            findAll<MermaidBlockDivider>(file).isEmpty())
+    }
+
+    fun testSequenceMessageContainingBlockKeyword() {
+        val file = parseText("sequenceDiagram\n    A->>B: retry the loop again")
+        assertNoErrors(file)
+        assertTrue("'loop' in message text should not open a block",
+            findAll<MermaidBlock>(file).isEmpty())
+    }
+
+    fun testSequenceMessageAndInsideParBlock() {
+        val file = parseText(
+            "sequenceDiagram\n" +
+            "    par Branch one\n" +
+            "        A->>B: check and verify\n" +
+            "    and Branch two\n" +
+            "        A->>C: request\n" +
+            "    end"
+        )
+        assertNoErrors(file)
+        assertEquals("only the line-start 'and' is a divider",
+            1, findAll<MermaidBlockDivider>(file).size)
+    }
+
+    fun testSequenceLineStartAndOutsideBlockIsStillAnError() {
+        val file = parseText(
+            "sequenceDiagram\n" +
+            "    A->>B: hello\n" +
+            "    and orphan branch"
+        )
+        val errors = PsiTreeUtil.findChildrenOfType(file, PsiErrorElement::class.java)
+        assertFalse("'and' at line start outside par should stay an error (matches Mermaid.js)",
+            errors.isEmpty())
+    }
+
+    // --- Diagram context per generic type (no stale context, no phantom blocks) ---
+
+    fun testGenericDiagramAfterSequenceDoesNotInheritSequenceContext() {
+        val file = parseText(
+            "sequenceDiagram\n" +
+            "    A->>B: hi\n" +
+            "mindmap\n" +
+            "  root((r))\n" +
+            "    and more ideas"
+        )
+        assertNoErrors(file)
+        assertTrue("'and' in a mindmap after a sequenceDiagram must not become a divider",
+            findAll<MermaidBlockDivider>(file).isEmpty())
+    }
+
+    fun testMindmapLineStartBlockKeywordIsContent() {
+        val file = parseText(
+            "mindmap\n" +
+            "  root((day))\n" +
+            "    break time\n" +
+            "    box of ideas\n" +
+            "    lunch"
+        )
+        assertNoErrors(file)
+        assertTrue("content diagrams have no end-terminated blocks",
+            findAll<MermaidBlock>(file).isEmpty())
+    }
+
+    fun testBlockBetaCompositeBlock() {
+        val file = parseText(
+            "block-beta\n" +
+            "    columns 3\n" +
+            "    block:group1:2\n" +
+            "        A B\n" +
+            "    end\n" +
+            "    C"
+        )
+        assertNoErrors(file)
+        assertEquals("block-beta composite block must still parse as a block",
+            1, findAll<MermaidBlock>(file).size)
+    }
+
+    fun testSwimlaneSubgraphBlock() {
+        val file = parseText(
+            "swimlane-beta LR\n" +
+            "    subgraph Lane1\n" +
+            "        A --> B\n" +
+            "    end"
+        )
+        assertNoErrors(file)
+        assertEquals("swimlane-beta supports subgraph blocks like flowchart",
+            1, findAll<MermaidBlock>(file).size)
     }
 }
