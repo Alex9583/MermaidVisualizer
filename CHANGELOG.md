@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.11.1] - 2026-08-14
+
+- Fix Mermaid parser treating keywords inside message text as syntax (#28)
+
 ## [1.11.0] - 2026-07-30
 
 - Add `mermaid-elk.js` script for ELK layout support (#26)
