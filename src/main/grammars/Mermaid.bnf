@@ -67,7 +67,7 @@ erDiagram ::= <<consumeErType>> diagramBody
 stateDiagram ::= <<consumeStateType>> diagramBody
   {pin=1}
 
-genericDiagram ::= DIAGRAM_TYPE diagramBody
+genericDiagram ::= <<consumeGenericType>> diagramBody
   {pin=1}
 
 // ===== Flowchart direction (LR, RL, TD, TB, BT) =====

@@ -93,12 +93,13 @@ class MermaidCompletionDataTest {
             setOf("loop", "alt", "opt", "par", "critical", "break", "rect", "box"),
             MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.SEQUENCE),
         )
-        assertEquals(setOf("namespace"), MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.CLASS))
+        assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.CLASS).isEmpty())
         assertEquals(setOf("subgraph"), MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.SWIMLANE))
         assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.ER).isEmpty())
         assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.STATE).isEmpty())
         assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.CYNEFIN).isEmpty())
         assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.RAILROAD).isEmpty())
+        assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.WARDLEY).isEmpty())
     }
 
     @Test

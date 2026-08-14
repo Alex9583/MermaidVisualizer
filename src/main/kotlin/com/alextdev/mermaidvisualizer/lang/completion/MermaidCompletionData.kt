@@ -245,7 +245,6 @@ object MermaidCompletionData {
     private val SEQUENCE_BLOCK_KEYWORDS = setOf(
         "loop", "alt", "opt", "par", "critical", "break", "rect", "box",
     )
-    private val CLASS_BLOCK_KEYWORDS = setOf("namespace")
 
     /** Block keywords that open a block...end structure for a given diagram kind. */
     fun blockKeywordsFor(kind: MermaidDiagramKind): Set<String> = when (kind) {
@@ -254,8 +253,8 @@ object MermaidCompletionData {
         MermaidDiagramKind.SWIMLANE,
         -> FLOWCHART_BLOCK_KEYWORDS
         MermaidDiagramKind.SEQUENCE -> SEQUENCE_BLOCK_KEYWORDS
-        MermaidDiagramKind.CLASS -> CLASS_BLOCK_KEYWORDS
         MermaidDiagramKind.BLOCK -> setOf("block")
+        MermaidDiagramKind.CLASS,
         MermaidDiagramKind.ER,
         MermaidDiagramKind.STATE,
         MermaidDiagramKind.STATE_V1,
@@ -289,8 +288,8 @@ object MermaidCompletionData {
         MermaidDiagramKind.RAILROAD_EBNF,
         MermaidDiagramKind.RAILROAD_ABNF,
         MermaidDiagramKind.RAILROAD_PEG,
+        MermaidDiagramKind.WARDLEY,
         -> emptySet()
-        MermaidDiagramKind.WARDLEY -> setOf("pipeline")
     }
 
     /** Divider keywords valid inside blocks for a given diagram kind. */
