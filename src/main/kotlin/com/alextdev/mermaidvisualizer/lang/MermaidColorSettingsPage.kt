@@ -48,10 +48,12 @@ private val DEMO_TEXT = """
             B -->|Yes| C[Dashboard]
             B -->|No| D[Error]
         end
+        E@{ shape: person, label: "User" }
+        E --> A
 
     sequenceDiagram
         participant Alice
-        Alice ->> Bob: Hello
+        Alice->>Bob: Hello
         Bob -->> Alice: Hi
 
     pie title Browsers

@@ -104,4 +104,47 @@ class MermaidElkJsTest {
         assertNotNull(headerVersion, "Generated file should declare its version in the header comment")
         assertEquals(version, headerVersion, "Header version should match mermaid-elk.version")
     }
+
+    // ── Multi-chunk conversion (layout-elk ≥ 0.2.3) ─────────────────────
+
+    @Test
+    fun `elk js bundles every chunk in a module registry`() {
+        assertTrue(
+            jsContent.contains("const __elkModules={};"),
+            "Should declare the module registry"
+        )
+        assertTrue(
+            jsContent.contains("__elkModules[\"render-"),
+            "The render chunk should be registered in the module registry"
+        )
+        assertTrue(
+            jsContent.contains("const __elkModule=__elkModules[\"render-"),
+            "The loader should resolve to the registered render module"
+        )
+        val moduleCount = Regex("""(?m)^__elkModules\["[^"]+"\]=\(function\(\)\{$""").findAll(jsContent).count()
+        assertTrue(moduleCount > 1, "Expected several bundled chunks, found $moduleCount")
+    }
+
+    @Test
+    fun `elk js stubs lazy chunk imports instead of loading them`() {
+        assertTrue(
+            jsContent.contains("const __elkLazyImport=function(name){"),
+            "Should define the rejecting lazy-import stub"
+        )
+        assertFalse(jsContent.contains("import(\""), "No literal dynamic import may remain")
+        assertFalse(
+            Regex("""\bimport\s*\(""").containsMatchIn(jsContent),
+            "No dynamic import call may remain"
+        )
+        assertFalse(jsContent.contains("import.meta"), "import.meta is not available in a classic script")
+    }
+
+    @Test
+    fun `elk js has no unresolved relative chunk references`() {
+        assertFalse(
+            Regex("""["']\./[^"']*\.mjs["']""").containsMatchIn(jsContent),
+            "No relative .mjs module reference may remain"
+        )
+        assertFalse(jsContent.contains("from\"./chunk"), "No ESM import from a sibling chunk may remain")
+    }
 }

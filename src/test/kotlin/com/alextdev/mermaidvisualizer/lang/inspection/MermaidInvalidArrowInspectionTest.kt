@@ -92,6 +92,33 @@ class MermaidInvalidArrowInspectionTest : BasePlatformTestCase() {
         myFixture.checkHighlighting()
     }
 
+    fun testValidErArrowsInsideAndBetweenSubgraphs() {
+        // ER subgraphs (Mermaid 11.17.0+): no parse error on `end`, arrows validated as ER arrows
+        myFixture.configureByText(
+            "test.mmd",
+            "erDiagram\n" +
+            "    subgraph title1\n" +
+            "        A1 ||--|| A2 : links\n" +
+            "    end\n" +
+            "    subgraph title2\n" +
+            "        B1 ||--o{ B2 : links\n" +
+            "    end\n" +
+            "    title1 ||--|| title2 : links"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    fun testInvalidFlowchartArrowInsideErSubgraph() {
+        myFixture.configureByText(
+            "test.mmd",
+            "erDiagram\n" +
+            "    subgraph title1\n" +
+            "        A1 <warning descr=\"Arrow '-->' is not valid in erDiagram diagrams. Valid: ||--o{, ||--|{, }o--||, }|--||, ||--||, }o--o{, }|--|{\">--></warning> A2\n" +
+            "    end"
+        )
+        myFixture.checkHighlighting()
+    }
+
     fun testQuickFixSuggestsReplacement() {
         myFixture.configureByText("test.mmd", "flowchart LR\n    A ->> B")
         myFixture.enableInspections(MermaidInvalidArrowInspection())
@@ -153,5 +180,73 @@ class MermaidInvalidArrowInspectionTest : BasePlatformTestCase() {
         val text = myFixture.editor.document.text
         assertTrue("Document should contain '-->' after fix", text.contains("-->"))
         assertFalse("Document should not contain '->>' after fix", text.contains("->>"))
+    }
+
+    // ── Lexer text model: `->` is an ARROW, glued arrows, link fragments ──
+
+    fun testSingleDashArrowInvalidInFlowchart() {
+        myFixture.configureByText(
+            "test.mmd",
+            "flowchart LR\n    A <warning descr=\"Arrow '->' is not valid in flowchart diagrams. Valid: -->, --->, ==>, -.->, --x, --o, <-->, ~~~\">-></warning> B"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    fun testSingleDashArrowInvalidInStateDiagram() {
+        myFixture.configureByText(
+            "test.mmd",
+            "stateDiagram-v2\n    s1 <warning descr=\"Arrow '->' is not valid in stateDiagram-v2 diagrams. Valid: -->\">-></warning> s2"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    fun testGluedSequenceArrowsValid() {
+        myFixture.configureByText(
+            "test.mmd",
+            "sequenceDiagram\n    Alice->John: Hello\n    Alice->>+Bob: x\n    Bob-->>-Alice: y\n    Alice-->>Bob: z"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    fun testFlowchartLinkWithTextFragmentsValid() {
+        myFixture.configureByText(
+            "test.mmd",
+            "flowchart LR\n    A -- text --> B\n    A --- B\n    A-. text .->B\n    A == text ==> B\n    A ---- B"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    fun testArrowsInsideLabelsAndPipesNotValidated() {
+        myFixture.configureByText("test.mmd", "flowchart LR\n    A[x -> y] --> B\n    A -->|a -> b| B")
+        myFixture.checkHighlighting()
+    }
+
+    fun testArrowAfterColonNotValidatedInClass() {
+        myFixture.configureByText("test.mmd", "classDiagram\n    Animal : +run() -> bool")
+        myFixture.checkHighlighting()
+    }
+
+    fun testArrowAfterColonNotValidatedInSequence() {
+        myFixture.configureByText("test.mmd", "sequenceDiagram\n    A->>B: see --> docs")
+        myFixture.checkHighlighting()
+    }
+
+    fun testGluedClassArrowsValid() {
+        myFixture.configureByText("test.mmd", "classDiagram\n    A .. B\n    Animal<|--Duck\n    A..>B")
+        myFixture.checkHighlighting()
+    }
+
+    fun testTrailingDotsInNodeIdNotValidated() {
+        // `Loading...` is a node id ending with dots: the glued `..` is not a link
+        myFixture.configureByText("test.mmd", "flowchart LR\n    Loading... --> Done\n    Step1.. --> Step2")
+        myFixture.checkHighlighting()
+    }
+
+    fun testSpacedDottedLinkStillInvalidInFlowchart() {
+        myFixture.configureByText(
+            "test.mmd",
+            "flowchart LR\n    A <warning descr=\"Arrow '..' is not valid in flowchart diagrams. Valid: -->, --->, ==>, -.->, --x, --o, <-->, ~~~\">..</warning> B"
+        )
+        myFixture.checkHighlighting()
     }
 }

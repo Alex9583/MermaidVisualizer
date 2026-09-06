@@ -282,6 +282,22 @@ class MermaidCompletionContributorTest : BasePlatformTestCase() {
         assertTrue("Expected service", completions.contains("service"))
     }
 
+    // ── ER subgraphs (Mermaid 11.17.0) ─────────────────────────────────
+
+    fun testErSubgraphKeyword() {
+        val completions = completionsAt("erDiagram\n    <caret>")
+        assertTrue("Expected subgraph in erDiagram", completions.contains("subgraph"))
+        assertFalse("Should not offer end outside a block", completions.contains("end"))
+        assertFalse("Should not offer classDef", completions.contains("classDef"))
+        assertFalse("Should not offer participant", completions.contains("participant"))
+    }
+
+    fun testEndInsideErSubgraph() {
+        val completions = completionsAt("erDiagram\n    subgraph title1\n        <caret>\n    end")
+        assertTrue("Expected end inside ER subgraph", completions.contains("end"))
+        assertTrue("Expected nested subgraph", completions.contains("subgraph"))
+    }
+
     // ── Arrow completion ───────────────────────────────────────────────
 
     fun testArrowsInFlowchartAfterIdentifier() {
@@ -391,4 +407,20 @@ class MermaidCompletionContributorTest : BasePlatformTestCase() {
         assertEquals("flowchart TD", myFixture.editor.document.text.trimEnd())
     }
 
+    // ── Glued arrows and `@{ ... }` metadata (lexer text model) ─────────
+
+    fun testNodeNameAfterGluedArrow() {
+        val completions = completionsAt(
+            "sequenceDiagram\n    participant Alice\n    participant Bob\n    Alice->><caret>"
+        )
+        assertTrue("Expected Bob", completions.contains("Bob"))
+        assertTrue("Expected Alice", completions.contains("Alice"))
+    }
+
+    fun testNodeNameBeforeShapeMetadataNotPolluted() {
+        val completions = completionsAt("flowchart LR\n    A --> B@{ shape: person }\n    <caret>")
+        assertTrue("Expected B", completions.contains("B"))
+        assertFalse("Should not offer B@", completions.contains("B@"))
+        assertFalse("Should not offer @", completions.contains("@"))
+    }
 }

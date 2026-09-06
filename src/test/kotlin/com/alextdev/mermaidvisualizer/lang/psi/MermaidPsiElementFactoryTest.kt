@@ -1,5 +1,7 @@
 package com.alextdev.mermaidvisualizer.lang.psi
 
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.IncorrectOperationException
 
@@ -72,5 +74,50 @@ class MermaidPsiElementFactoryTest : BasePlatformTestCase() {
         assertFalse("No Alice should remain", text.contains("Alice"))
         val charlieCount = Regex("Charlie").findAll(text).count()
         assertEquals("Charlie should appear twice", 2, charlieCount)
+    }
+
+    // ── Names the lexer splits (`@`, arrows) are rejected, never truncated ──
+
+    fun testCreateNodeRefWithAtSignThrows() {
+        try {
+            MermaidPsiElementFactory.createNodeRef(project, "B@")
+            fail("Should throw IllegalStateException for a name the lexer splits")
+        } catch (_: IllegalStateException) {
+            // expected
+        }
+    }
+
+    fun testCreateNodeRefWithArrowThrows() {
+        try {
+            MermaidPsiElementFactory.createNodeRef(project, "A-->B")
+            fail("Should throw IllegalStateException for a name containing an arrow")
+        } catch (_: IllegalStateException) {
+            // expected
+        }
+    }
+
+    fun testSetNameWithAtSignThrowsIncorrectOperation() {
+        val psi = myFixture.configureByText("test.mmd", "flowchart LR\n    Alice --> Bob")
+        val alice = PsiTreeUtil.findChildrenOfType(psi, MermaidNodeRef::class.java).first { it.name == "Alice" }
+        try {
+            WriteCommandAction.runWriteCommandAction(project) {
+                alice.setName("B@")
+            }
+            fail("Should throw IncorrectOperationException for a name the lexer splits")
+        } catch (_: IncorrectOperationException) {
+            // expected
+        }
+    }
+
+    fun testRenameNodeWithShapeMetadata() {
+        myFixture.configureByText(
+            "test.mmd",
+            "flowchart LR\n    A --> <caret>B@{ shape: person }\n    B --> C"
+        )
+        myFixture.renameElementAtCaret("Target")
+        assertEquals(
+            "flowchart LR\n    A --> Target@{ shape: person }\n    Target --> C",
+            myFixture.editor.document.text
+        )
     }
 }

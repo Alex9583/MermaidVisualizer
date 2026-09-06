@@ -332,6 +332,13 @@ class MermaidLexerTest {
                 A[Start] --> B{Decision}
                 B -->|Yes| C[OK]
                 B -->|No| D[Error]
+                U@{ shape: person, label: "User" }
+                S@{ shape: console, label: "API server" }
+                U --> S
+                subgraph legacy [Legacy services]
+                    L1[Batch job] --> L2[Mainframe]
+                end
+                legacy@{ view: collapsed }
         """.trimIndent()
         val tokens = tokenize(input)
         assertFalse(tokens.any { it.first == TokenType.BAD_CHARACTER },
@@ -780,19 +787,14 @@ class MermaidLexerTest {
     }
 
     @Test
-    fun testArrowWithoutSpacesIsKnownLimitation() {
-        // Arrows without surrounding spaces: the catch-all IDENTIFIER in NORMAL state captures
-        // the arrow + trailing identifier as one token (JFlex longest-match wins over arrow patterns).
-        // This is a known limitation. Spaces around arrows are needed for correct tokenization.
+    fun testArrowWithoutSpacesIsTokenized() {
+        // "Bob" matched in YYINITIAL, then the arrow and "Alice" are separate tokens in NORMAL:
+        // TEXT cannot contain arrow characters, so glued arrows no longer swallow the next identifier.
         val tokens = nonWhitespaceTokens("Bob-->>Alice")
-        // "Bob" matched by HYPHEN_ID in YYINITIAL, "-->>Alice" by catch-all in NORMAL
-        assertEquals(2, tokens.size)
-        assertEquals(MermaidTokenTypes.IDENTIFIER, tokens[0].first)
-        assertEquals("Bob", tokens[0].second)
-        assertEquals(MermaidTokenTypes.IDENTIFIER, tokens[1].first)
-        assertEquals("-->>Alice", tokens[1].second)
-        // The arrow is NOT separately recognized — compare with spaced version
-        assertFalse(tokens.any { it.first == MermaidTokenTypes.ARROW })
+        assertEquals(3, tokens.size)
+        assertEquals(MermaidTokenTypes.IDENTIFIER to "Bob", tokens[0])
+        assertEquals(MermaidTokenTypes.ARROW to "-->>", tokens[1])
+        assertEquals(MermaidTokenTypes.IDENTIFIER to "Alice", tokens[2])
     }
 
     @Test
@@ -876,5 +878,226 @@ class MermaidLexerTest {
         assertEquals(MermaidTokenTypes.IDENTIFIER to "End", tokens[9])
         assertEquals(MermaidTokenTypes.BRACKET_CLOSE to "]", tokens[10])
         assertEquals(11, tokens.size)
+    }
+
+    // ── Glued arrows, `@` metadata and the SYMBOL fallback ─────────────
+
+    private val ID = MermaidTokenTypes.IDENTIFIER
+    private val AR = MermaidTokenTypes.ARROW
+    private val SYM = MermaidTokenTypes.SYMBOL
+    private val KW = MermaidTokenTypes.KEYWORD
+    private val NUM = MermaidTokenTypes.NUMBER
+    private val COLON = MermaidTokenTypes.COLON
+    private val OPEN = MermaidTokenTypes.BRACKET_OPEN
+    private val CLOSE = MermaidTokenTypes.BRACKET_CLOSE
+    private val PIPE = MermaidTokenTypes.PIPE
+    private val COMMA = MermaidTokenTypes.COMMA
+    private val FORM_FEED = "\u000C"
+
+    /** Compares the non-whitespace token list of [input] exactly, ignoring the leading diagram header. */
+    private fun assertBodyTokens(input: String, vararg expected: Pair<IElementType, String>) {
+        val tokens = nonWhitespaceTokens(input)
+            .dropWhile { it.first == MermaidTokenTypes.DIAGRAM_TYPE || (it.first == KW && it.second in setOf("LR", "TD", "TB", "RL", "BT")) }
+        assertEquals(expected.toList(), tokens, "Tokens for: $input")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["->>", "-->>", "->>+", "-->>-", "->", "-)", "--)", "-->", "--x"])
+    fun testGluedSequenceArrows(arrow: String) {
+        assertBodyTokens("sequenceDiagram\n    Alice${arrow}Bob: hi",
+            ID to "Alice", AR to arrow, ID to "Bob", COLON to ":", ID to "hi")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["-->", "--->", "==>", "-.->", "--x", "--o", "<-->", "~~~", "---", "-->>"])
+    fun testGluedFlowchartArrows(arrow: String) {
+        assertBodyTokens("flowchart LR\n    A${arrow}B", ID to "A", AR to arrow, ID to "B")
+    }
+
+    // `o--` glued to the source (`Ao--B`) is inherently ambiguous with an identifier ending in `o`
+    // and stays `Ao` + `--` (same family as the `-x` limitation); `A o-- B` works.
+    @ParameterizedTest
+    @ValueSource(strings = ["<|--", "--|>", "..>", "<..", "..|>", "<|..", "*--", "--*", "--o", "..", "--"])
+    fun testGluedClassArrows(arrow: String) {
+        assertBodyTokens("classDiagram\n    A${arrow}B", ID to "A", AR to arrow, ID to "B")
+    }
+
+    @Test
+    fun testGluedErArrow() {
+        assertBodyTokens("erDiagram\n    CUSTOMER||--o{ORDER : places",
+            ID to "CUSTOMER", AR to "||--o{", ID to "ORDER", COLON to ":", ID to "places")
+    }
+
+    @Test
+    fun testGluedStateArrow() {
+        assertBodyTokens("stateDiagram-v2\n    [*] --> Still\n    Still-->Moving",
+            OPEN to "[", SYM to "*", CLOSE to "]", AR to "-->", ID to "Still",
+            ID to "Still", AR to "-->", ID to "Moving")
+    }
+
+    @Test
+    fun testGluedLabeledFlowchartArrow() {
+        assertBodyTokens("flowchart LR\n    A-->|yes|B",
+            ID to "A", AR to "-->", PIPE to "|", ID to "yes", PIPE to "|", ID to "B")
+    }
+
+    @Test
+    fun testDottedLinkWithText() {
+        assertBodyTokens("flowchart LR\n    A-. text .->B",
+            ID to "A", AR to "-.", ID to "text", AR to ".->", ID to "B")
+    }
+
+    @Test
+    fun testOpenLinkWithText() {
+        assertBodyTokens("flowchart LR\n    A-- text -->B",
+            ID to "A", AR to "--", ID to "text", AR to "-->", ID to "B")
+    }
+
+    @Test
+    fun testGluedCrossArrowIsKnownLimitation() {
+        // `-x` glued to the target keeps matching HYPHEN_ID (excluding an `x`-initial tail would break
+        // flowchart ids such as `pre-xfer`). `Alice -x Bob` and `Alice--xBob` work.
+        assertBodyTokens("sequenceDiagram\n    Alice-xBob: x", ID to "Alice-xBob", COLON to ":", ID to "x")
+        assertBodyTokens("sequenceDiagram\n    Alice -x Bob: x", ID to "Alice", AR to "-x", ID to "Bob", COLON to ":", ID to "x")
+    }
+
+    @Test
+    fun testShapeMetadataAtLineStart() {
+        assertBodyTokens("flowchart LR\n    U@{ shape: person }",
+            ID to "U", SYM to "@", OPEN to "{", ID to "shape", COLON to ":", ID to "person", CLOSE to "}")
+    }
+
+    @Test
+    fun testShapeMetadataMidLine() {
+        assertBodyTokens("flowchart LR\n    A --> B@{ shape: person }",
+            ID to "A", AR to "-->", ID to "B", SYM to "@", OPEN to "{", ID to "shape", COLON to ":", ID to "person", CLOSE to "}")
+    }
+
+    @Test
+    fun testCollapsedSubgraphMetadata() {
+        assertBodyTokens("flowchart LR\n    legacy@{ view: collapsed }",
+            ID to "legacy", SYM to "@", OPEN to "{", ID to "view", COLON to ":", ID to "collapsed", CLOSE to "}")
+    }
+
+    @Test
+    fun testEdgeIdIsSplitFromArrow() {
+        assertBodyTokens("flowchart LR\n    A e1@--> B",
+            ID to "A", ID to "e1", SYM to "@", AR to "-->", ID to "B")
+    }
+
+    @Test
+    fun testZenumlStereotypeIsSingleSymbol() {
+        assertBodyTokens("zenuml\n    @Actor Client", SYM to "@Actor", ID to "Client")
+    }
+
+    @Test
+    fun testEmailInMessageText() {
+        assertBodyTokens("sequenceDiagram\n    A->>B: mail me@x.com",
+            ID to "A", AR to "->>", ID to "B", COLON to ":", ID to "mail", ID to "me", SYM to "@x", ID to ".com")
+    }
+
+    @Test
+    fun testEqualsAndPostfixOperatorsAreSymbols() {
+        assertBodyTokens("railroad-ebnf-beta\n    expression = term ;\n    Letter* ;\n    digit+ ;",
+            ID to "expression", SYM to "=", ID to "term", MermaidTokenTypes.SEMICOLON to ";",
+            ID to "Letter", SYM to "*", MermaidTokenTypes.SEMICOLON to ";",
+            ID to "digit", SYM to "+", MermaidTokenTypes.SEMICOLON to ";")
+    }
+
+    @Test
+    fun testHtmlBreakInsideLabel() {
+        assertBodyTokens("flowchart LR\n    A[Line1<br/>Line2]",
+            ID to "A", OPEN to "[", ID to "Line1", SYM to "<", ID to "br/", SYM to ">", ID to "Line2", CLOSE to "]")
+    }
+
+    @Test
+    fun testClassGenericsUseSymbols() {
+        assertBodyTokens("classDiagram\n    class Square~Shape~{",
+            KW to "class", ID to "Square", SYM to "~", ID to "Shape", SYM to "~", OPEN to "{")
+    }
+
+    @Test
+    fun testLoneHyphenAndSingleArrowInRequirement() {
+        assertBodyTokens("requirementDiagram\n    test_entity - satisfies -> test_req",
+            ID to "test_entity", SYM to "-", KW to "satisfies", AR to "->", ID to "test_req")
+    }
+
+    @Test
+    fun testAmpersandIsSymbol() {
+        assertBodyTokens("flowchart LR\n    A & B --> C", ID to "A", SYM to "&", ID to "B", AR to "-->", ID to "C")
+    }
+
+    @Test
+    fun testSlashBetweenStringsIsSymbol() {
+        val tokens = nonWhitespaceTokens("railroad-peg-beta\n    Keyword <- \"if\" / \"else\"")
+        assertTrue(tokens.contains(AR to "<-"))
+        assertTrue(tokens.contains(SYM to "/"))
+        assertFalse(tokens.any { it.first == ID && it.second == "/" })
+    }
+
+    @Test
+    fun testFormFeedIsSymbolNotBadCharacter() {
+        // `[^]` fallback: under %unicode a plain `.` would leave a form feed unmatched (BAD_CHARACTER for the rest of the file)
+        val tokens = tokenize("flowchart LR\n    A " + FORM_FEED + " B")
+        assertFalse(tokens.any { it.first == TokenType.BAD_CHARACTER })
+        assertTrue(tokens.contains(SYM to FORM_FEED))
+    }
+
+    @Test
+    fun testAccentedHyphenatedIdentifierMidLine() {
+        assertBodyTokens("flowchart LR\n    A --> Réseau-local", ID to "A", AR to "-->", ID to "Réseau-local")
+    }
+
+    @Test
+    fun testAccentedIdentifierAtLineStart() {
+        assertBodyTokens("flowchart LR\n    Réseau --> X", ID to "Réseau", AR to "-->", ID to "X")
+    }
+
+    @Test
+    fun testNumberAtLineStart() {
+        assertBodyTokens("timeline\n    2002 : LinkedIn", NUM to "2002", COLON to ":", ID to "LinkedIn")
+    }
+
+    @Test
+    fun testSignedAndLeadingDotNumbers() {
+        assertBodyTokens("xychart-beta\n    bar [2.3, 45, .98, -3.4]",
+            KW to "bar", OPEN to "[", NUM to "2.3", COMMA to ",", NUM to "45", COMMA to ",",
+            NUM to ".98", COMMA to ",", NUM to "-3.4", CLOSE to "]")
+    }
+
+    @Test
+    fun testDigitRangeAndDatesStayIdentifiers() {
+        assertBodyTokens("packet-beta\n    0-15: x", ID to "0-15", COLON to ":", ID to "x")
+        assertBodyTokens("gantt\n    A task :a1, 2024-01-01, 30d",
+            ID to "A", ID to "task", COLON to ":", ID to "a1", COMMA to ",", ID to "2024-01-01", COMMA to ",", ID to "30d")
+    }
+
+    @Test
+    fun testDottedIdentifiersStayWhole() {
+        assertBodyTokens("flowchart LR\n    v1.2.3 --> x.com", ID to "v1.2.3", AR to "-->", ID to "x.com")
+        assertBodyTokens("zenuml\n    Client->OrderController.placeOrder()",
+            ID to "Client", AR to "->", ID to "OrderController.placeOrder", OPEN to "(", CLOSE to ")")
+    }
+
+    @Test
+    fun testHyphenatedKeywordsStillWinTies() {
+        assertBodyTokens("quadrantChart\n    x-axis Low --> High\n    title Foo",
+            KW to "x-axis", ID to "Low", AR to "-->", ID to "High", KW to "title", ID to "Foo")
+        assertBodyTokens("gitGraph\n    cherry-pick id: \"x\"",
+            KW to "cherry-pick", ID to "id", COLON to ":",
+            MermaidTokenTypes.STRING_DOUBLE to "\"", MermaidTokenTypes.STRING_DOUBLE to "x", MermaidTokenTypes.STRING_DOUBLE to "\"")
+    }
+
+    @Test
+    fun testStyleHashColorsStayIdentifiers() {
+        assertBodyTokens("flowchart LR\n    style A fill:#f9f,stroke:#333",
+            KW to "style", ID to "A", ID to "fill", COLON to ":", ID to "#f9f", COMMA to ",", ID to "stroke", COLON to ":", ID to "#333")
+    }
+
+    @Test
+    fun testC4NamedAttribute() {
+        val tokens = nonWhitespaceTokens("C4Context\n    Person(customer, \"Customer\", \$tags=\"x\")")
+        assertTrue(tokens.contains(ID to "\$tags"))
+        assertTrue(tokens.contains(SYM to "="))
     }
 }

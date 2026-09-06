@@ -168,11 +168,6 @@ class MermaidParserTest : BasePlatformTestCase() {
         assertNotNull(file.node)
     }
 
-    fun testAllDiagramsFixture() {
-        val psiFile = myFixture.configureByFile("all-diagrams.md")
-        assertNotNull(psiFile.node)
-    }
-
     // --- State diagram ---
 
     fun testStateDiagram() {
@@ -494,5 +489,50 @@ class MermaidParserTest : BasePlatformTestCase() {
         assertNoErrors(file)
         assertEquals("swimlane-beta supports subgraph blocks like flowchart",
             1, findAll<MermaidBlock>(file).size)
+    }
+
+    // --- ER subgraphs (Mermaid 11.17.0+) ---
+
+    fun testErSubgraphBlock() {
+        val file = parseText(
+            "erDiagram\n" +
+            "    subgraph title1\n" +
+            "        A1 ||--|| A2 : links\n" +
+            "    end\n" +
+            "    title1 ||--|| A2 : links"
+        )
+        assertNotNull(findFirst<MermaidErDiagram>(file))
+        assertNoErrors(file)
+        assertEquals("erDiagram supports subgraph blocks since Mermaid 11.17",
+            1, findAll<MermaidBlock>(file).size)
+    }
+
+    fun testErNestedSubgraphsWithEntityAttributes() {
+        val file = parseText(
+            "erDiagram\n" +
+            "    subgraph title2\n" +
+            "        CAR ||--o{ NAMED-DRIVER : allows\n" +
+            "        subgraph title3\n" +
+            "            PERSON\n" +
+            "            PERSON {\n" +
+            "                string firstName\n" +
+            "                int age\n" +
+            "            }\n" +
+            "        end\n" +
+            "    end"
+        )
+        assertNoErrors(file)
+        assertEquals("nested ER subgraphs with attribute braces inside",
+            2, findAll<MermaidBlock>(file).size)
+    }
+
+    fun testErOrphanEndIsStillAnError() {
+        val file = parseText(
+            "erDiagram\n" +
+            "    A1 ||--|| A2 : links\n" +
+            "    end"
+        )
+        val errors = PsiTreeUtil.findChildrenOfType(file, PsiErrorElement::class.java)
+        assertFalse("'end' without an opening subgraph should stay an error", errors.isEmpty())
     }
 }

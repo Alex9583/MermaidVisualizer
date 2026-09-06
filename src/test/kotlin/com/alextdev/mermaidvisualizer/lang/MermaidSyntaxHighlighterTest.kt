@@ -87,6 +87,14 @@ class MermaidSyntaxHighlighterTest {
     }
 
     @Test
+    fun testSymbolHighlight() {
+        // Stray characters (`@`, `=`, `<`, `>`, `~`, `*`, lone `-`) share the punctuation color
+        val keys = highlighter.getTokenHighlights(MermaidTokenTypes.SYMBOL)
+        assertEquals(1, keys.size)
+        assertEquals(MERMAID_PUNCTUATION_KEY, keys[0])
+    }
+
+    @Test
     fun testPunctuationHighlight() {
         val colonKeys = highlighter.getTokenHighlights(MermaidTokenTypes.COLON)
         assertEquals(1, colonKeys.size)

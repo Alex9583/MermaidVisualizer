@@ -177,4 +177,38 @@ class MermaidReferenceTest : BasePlatformTestCase() {
         assertNotNull("Should resolve to first develop", resolved)
         assertEquals("develop", (resolved as MermaidNodeRef).name)
     }
+
+    // ── Glued arrows and `@{ ... }` metadata (lexer text model) ─────────
+
+    fun testResolveNodeBeforeShapeMetadata() {
+        val ref = findReferenceAt(
+            "flowchart LR\n    A --> B\n    A --> B@{ shape: person }",
+            "B", 2
+        )
+        assertNotNull("B before @{...} should have a reference", ref)
+        val resolved = ref!!.resolve()
+        assertNotNull("Should resolve to the first B", resolved)
+        assertEquals("B", (resolved as MermaidNodeRef).name)
+        assertTrue("Should resolve to an earlier occurrence", resolved.textOffset < ref.element.textOffset)
+    }
+
+    fun testResolveGluedSequenceArrowToDeclaration() {
+        val text = "sequenceDiagram\n    participant Bob\n    Alice->>Bob: Hello"
+        val ref = findReferenceAt(text, "Bob", 2)
+        assertNotNull("Bob glued to the arrow should have a reference", ref)
+        val resolved = ref!!.resolve()
+        assertNotNull("Should resolve to the participant declaration", resolved)
+        assertEquals("Bob", (resolved as MermaidNodeRef).name)
+        assertEquals("Should resolve to the declaration", text.indexOf("Bob"), resolved.textOffset)
+    }
+
+    fun testNoReferenceInsideShapeMetadata() {
+        val text = "flowchart LR\n    A --> B@{ shape: person }"
+        val shape = findNodeRefAt(text, "shape")
+        assertNotNull("shape should exist as nodeRef", shape)
+        assertNull("shape inside @{...} should not have a reference", shape!!.reference)
+        val person = findNodeRefAt(text, "person")
+        assertNotNull("person should exist as nodeRef", person)
+        assertNull("person inside @{...} should not have a reference", person!!.reference)
+    }
 }

@@ -32,7 +32,7 @@ IntelliJ plugin for [Mermaid](https://mermaid.js.org/) diagrams — live preview
 - Export diagrams as SVG or PNG — copy to clipboard or save to file
 - Scroll synchronization between the text editor and the preview
 - Automatic dark/light theme detection and switching
-- Uses the official Mermaid.js library (v11.16.0) — supports all 32+ diagram types
+- Uses the official Mermaid.js library (v11.17.2) — supports all 32+ diagram types
 - **ELK layout support** — diagrams using `layout: elk` (and options like `elk.mergeEdges`) in their YAML frontmatter render with the bundled ELK engine
 - Works offline — Mermaid.js and the ELK layout engine are bundled, no CDN required
 

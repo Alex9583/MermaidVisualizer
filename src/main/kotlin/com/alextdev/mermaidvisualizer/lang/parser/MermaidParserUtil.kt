@@ -10,8 +10,9 @@ import com.intellij.psi.TokenType
  * External rules for Grammar-Kit generated parser.
  *
  * Tracks diagram context via [PsiBuilder.putUserData] to dispatch block/divider keywords
- * per diagram type. CLASS, ER, STATE and CONTENT have no `end`-terminated blocks
+ * per diagram type. CLASS, STATE and CONTENT have no `end`-terminated blocks
  * (namespaces and composite states use braces, content diagrams use indentation).
+ * ER shares the flowchart `subgraph` block (supported since Mermaid 11.17).
  * GENERIC is a superset used only for null context (error recovery outside any diagram).
  */
 @Suppress("unused")
@@ -38,11 +39,11 @@ object MermaidParserUtil : GeneratedParserUtilBase() {
 
     private fun blockKeywordsFor(context: DiagramContext?): Set<String> {
         return when (context) {
-            DiagramContext.FLOWCHART -> FLOWCHART_BLOCK_KEYWORDS
+            DiagramContext.FLOWCHART,
+            DiagramContext.ER -> FLOWCHART_BLOCK_KEYWORDS
             DiagramContext.SEQUENCE -> SEQUENCE_BLOCK_KEYWORDS
             DiagramContext.BLOCK_BETA -> BLOCK_BETA_BLOCK_KEYWORDS
             DiagramContext.CLASS,
-            DiagramContext.ER,
             DiagramContext.STATE,
             DiagramContext.CONTENT -> emptySet()
             DiagramContext.GENERIC, null -> GENERIC_BLOCK_KEYWORDS

@@ -67,7 +67,8 @@ class MermaidSyntaxHighlighter : SyntaxHighlighterBase() {
             MermaidTokenTypes.ARROW -> ARROW_KEYS
             MermaidTokenTypes.NUMBER -> NUMBER_KEYS
             MermaidTokenTypes.BRACKET_OPEN, MermaidTokenTypes.BRACKET_CLOSE -> BRACES_KEYS
-            MermaidTokenTypes.COLON, MermaidTokenTypes.SEMICOLON, MermaidTokenTypes.COMMA -> PUNCTUATION_KEYS
+            MermaidTokenTypes.COLON, MermaidTokenTypes.SEMICOLON, MermaidTokenTypes.COMMA,
+            MermaidTokenTypes.SYMBOL -> PUNCTUATION_KEYS
             MermaidTokenTypes.PIPE -> BRACES_KEYS
             MermaidTokenTypes.IDENTIFIER -> IDENTIFIER_KEYS
             TokenType.BAD_CHARACTER -> BAD_CHAR_KEYS

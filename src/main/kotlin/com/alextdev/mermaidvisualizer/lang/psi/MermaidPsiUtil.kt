@@ -104,11 +104,41 @@ object MermaidPsiUtil {
     }
 
     /**
+     * Returns true if the element is inside a pipe-delimited edge label (`-->|text|`, `--|text|`):
+     * an odd number of PIPE tokens precede it on the current line.
+     */
+    internal fun isInsidePipes(element: PsiElement): Boolean {
+        var pipes = 0
+        var sib = element.prevSibling
+        while (sib != null) {
+            val type = sib.node.elementType
+            if (type == MermaidTokenTypes.PIPE) {
+                pipes++
+            } else if (type == TokenType.WHITE_SPACE && sib.text.contains('\n')) {
+                break
+            }
+            sib = sib.prevSibling
+        }
+        return pipes % 2 == 1
+    }
+
+    /**
+     * Returns true if the [MermaidNodeRef] is a flowchart edge id (`A e1@--> B`): it is directly
+     * followed by a `@` SYMBOL and then an ARROW. Edge ids are not node names.
+     */
+    internal fun isEdgeId(nodeRef: MermaidNodeRef): Boolean {
+        val at = nextSignificantSibling(nodeRef) ?: return false
+        if (at.node.elementType != MermaidTokenTypes.SYMBOL || at.text != "@") return false
+        val arrow = nextSignificantSibling(at) ?: return false
+        return arrow.node.elementType == MermaidTokenTypes.ARROW
+    }
+
+    /**
      * Returns true if the [MermaidNodeRef] represents a real node name
-     * (not a label inside brackets and not message text after a colon).
+     * (not a label inside brackets, not message text after a colon, not an edge id `e1@-->`).
      */
     fun isNodeName(nodeRef: MermaidNodeRef): Boolean =
-        !isInsideBrackets(nodeRef) && !isAfterColon(nodeRef)
+        !isInsideBrackets(nodeRef) && !isAfterColon(nodeRef) && !isEdgeId(nodeRef)
 
     // ── Identifier collection ───────────────────────────────────────────
 

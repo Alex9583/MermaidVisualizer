@@ -26,6 +26,7 @@ object MermaidElementTypeFactory {
         "SEMICOLON" -> MermaidTokenTypes.SEMICOLON
         "COMMA" -> MermaidTokenTypes.COMMA
         "IDENTIFIER" -> MermaidTokenTypes.IDENTIFIER
+        "SYMBOL" -> MermaidTokenTypes.SYMBOL
         else -> throw IllegalArgumentException(
             "Unknown token name '$name' in MermaidElementTypeFactory.createToken(). " +
             "Add this token to MermaidTokenTypes and update the when block."

@@ -99,7 +99,8 @@ object MermaidCompletionData {
         "state", "as", "note", "end",
     )
 
-    private val ER_KEYWORDS = emptySet<String>()
+    /** ER diagrams support flowchart-style `subgraph ... end` blocks since Mermaid 11.17. */
+    private val ER_KEYWORDS = setOf("subgraph", "end")
 
     private val GANTT_KEYWORDS = setOf(
         "title", "section", "dateFormat", "axisFormat", "tickInterval",
@@ -251,11 +252,11 @@ object MermaidCompletionData {
         MermaidDiagramKind.FLOWCHART,
         MermaidDiagramKind.GRAPH,
         MermaidDiagramKind.SWIMLANE,
+        MermaidDiagramKind.ER,
         -> FLOWCHART_BLOCK_KEYWORDS
         MermaidDiagramKind.SEQUENCE -> SEQUENCE_BLOCK_KEYWORDS
         MermaidDiagramKind.BLOCK -> setOf("block")
         MermaidDiagramKind.CLASS,
-        MermaidDiagramKind.ER,
         MermaidDiagramKind.STATE,
         MermaidDiagramKind.STATE_V1,
         MermaidDiagramKind.GANTT,
