@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.12.0] - 2026-09-06
+
+- Update Mermaid.js to v11.17.2 with ER subgraphs, ELK 0.2.3, and glued-arrow lexer fixes (#29)
+
 ## [1.11.1] - 2026-08-14
 
 - Fix Mermaid parser treating keywords inside message text as syntax (#28)
