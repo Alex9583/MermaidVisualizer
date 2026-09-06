@@ -201,21 +201,28 @@ tasks.register("updateMermaidElk") {
             return bytes.toString(Charsets.UTF_8)
         }
 
-        // The esm.min build is an entry + 2 hashed chunks (helper + self-contained render bundle).
-        // Chunk file names change on every release, so they are parsed from the entry's imports.
+        // The esm.min build is an entry that dynamically imports a hashed render chunk. Since layout-elk
+        // 0.2.3 that render chunk is no longer self-contained: it statically imports ~20 hashed sibling
+        // chunks (a code-split copy of mermaid's rendering utilities). Chunk file names change on every
+        // release, so the whole module graph is discovered from the entry and each chunk's leading imports.
         val entry = downloadVerified("/dist/mermaid-layout-elk.esm.min.mjs")
-        val helperRel = Regex("""import\{[^{}]*\}from"(\./chunks/[^"]+)"""").find(entry)?.groupValues?.get(1)
-            ?: error("Could not find helper chunk import in entry — the dist layout may have changed, update this task")
         val renderRel = Regex("""import\("(\./chunks/[^"]+)"\)""").find(entry)?.groupValues?.get(1)
             ?: error("Could not find render chunk dynamic import in entry — the dist layout may have changed, update this task")
-        fun rel2abs(rel: String) = "/dist/" + rel.removePrefix("./")
-        println("Chunks: ${rel2abs(helperRel)}, ${rel2abs(renderRel)}")
-        val helperSrc = downloadVerified(rel2abs(helperRel))
-        val renderSrc = downloadVerified(rel2abs(renderRel))
+        val chunkDir = "/dist/" + renderRel.removePrefix("./").substringBeforeLast('/')
+        val renderName = renderRel.substringAfterLast('/')
+        println("Render chunk: $chunkDir/$renderName")
 
         // --- ESM → classic-script conversion ---
         // Each chunk was a separate module scope with minified single-letter names, so each body is
-        // wrapped in its own IIFE and the import/export bindings are re-created explicitly.
+        // wrapped in its own IIFE stored in the `__elkModules` registry (dependencies first) and the
+        // import/export bindings are re-created explicitly as `const local=__elkModules["dep"].exported`
+        // (a snapshot is correct here: esbuild initializes every exported binding during module evaluation).
+        // Supported ESM forms — the only ones esbuild emits for this package:
+        //   - leading `import{a as b,...}from"./x.mjs";` and side-effect `import"./x.mjs";`
+        //   - a trailing `export{a as b,...};`, optionally followed by comments
+        //   - literal `import("./x.mjs")` inside bodies: lazy diagram chunks of the bundled mermaid copy,
+        //     which the layout engine never loads → replaced by `__elkLazyImport`, a rejecting stub.
+        // Anything else (import.meta, default/namespace imports, re-exports, cycles) fails the task loudly.
 
         // Splits "x as y" / "x" specs of an import/export clause into pairs (first name, alias-or-first).
         fun parseSpecs(clause: String): List<Pair<String, String>> =
@@ -224,29 +231,104 @@ tasks.register("updateMermaidElk") {
                 if (parts.size == 2) parts[0] to parts[1] else parts[0] to parts[0]
             }
 
-        // Removes the trailing export statement, returns (body, exportedName -> localName).
-        fun stripExport(src: String, ctx: String): Pair<String, Map<String, String>> {
-            val match = Regex("""export\{([^{}]*)\};?\s*$""").find(src)
-                ?: error("No trailing export statement found in $ctx — the dist format may have changed, update this task")
-            val body = src.removeRange(match.range)
-            val exports = parseSpecs(match.groupValues[1]).associate { (local, exported) -> exported to local }
-            return body to exports
+        class EsmModule(
+            val name: String,
+            /** Static dependencies in source order, side-effect imports included. */
+            val deps: List<String>,
+            /** (dependency, exported name, local name) for every named import. */
+            val imports: List<Triple<String, String, String>>,
+            val body: String,
+            /** exported name -> local name */
+            val exports: Map<String, String>,
+        )
+
+        val chunkNamePattern = Regex("""[A-Za-z0-9_.-]+\.mjs""")
+        val namedImport = Regex("""import\{([^{}]*)\}from"\./([^"/]+)";?""")
+        val sideEffectImport = Regex("""import"\./([^"/]+)";?""")
+        val trailingExport = Regex("""export\{([^{}]*)\};?(?:\s*/\*[\s\S]*?\*/)*\s*$""")
+        val dynamicImport = Regex("""import\("\./([^"]+)"\)""")
+
+        fun parseModule(name: String, src: String): EsmModule {
+            if (!chunkNamePattern.matches(name)) error("Unexpected chunk file name '$name' — update this task")
+            val deps = mutableListOf<String>()
+            val imports = mutableListOf<Triple<String, String, String>>()
+            var offset = 0
+            while (true) {
+                val named = namedImport.matchAt(src, offset)
+                if (named != null) {
+                    val dep = named.groupValues[2]
+                    deps.add(dep)
+                    parseSpecs(named.groupValues[1]).forEach { (exported, local) -> imports.add(Triple(dep, exported, local)) }
+                    offset = named.range.last + 1
+                    continue
+                }
+                val sideEffect = sideEffectImport.matchAt(src, offset)
+                if (sideEffect != null) {
+                    deps.add(sideEffect.groupValues[1])
+                    offset = sideEffect.range.last + 1
+                    continue
+                }
+                break
+            }
+            val rest = src.substring(offset)
+            if (rest.startsWith("import") || rest.startsWith("export")) {
+                error("Unsupported ESM form in $name: '${rest.take(80)}' — update this task")
+            }
+            val exportStart = rest.lastIndexOf("export{")
+            val exportMatch = if (exportStart >= 0) trailingExport.find(rest, exportStart) else null
+            if (exportMatch == null || exportMatch.range.first != exportStart) {
+                error("No trailing export statement found in $name — the dist format may have changed, update this task")
+            }
+            val body = dynamicImport.replace(rest.substring(0, exportStart)) { "__elkLazyImport(\"${it.groupValues[1]}\")" }
+            if (Regex("""\bimport\s*\(""").containsMatchIn(body)) {
+                error("Unsupported non-literal dynamic import in $name — update this task")
+            }
+            if (body.contains("import.meta")) error("Unsupported import.meta in $name — update this task")
+            if (Regex("""["']\./[^"']*\.mjs["']""").containsMatchIn(body)) {
+                error("Unresolved relative module reference remains in $name — update this task")
+            }
+            val exports = parseSpecs(exportMatch.groupValues[1]).associate { (local, exported) -> exported to local }
+            return EsmModule(name, deps, imports, body, exports)
         }
 
-        val (helperBody, helperExports) = stripExport(helperSrc, "helper chunk")
+        // Discover the transitive static import closure from the render chunk (each file hash-verified).
+        val modules = LinkedHashMap<String, EsmModule>()
+        val pending = ArrayDeque(listOf(renderName))
+        while (pending.isNotEmpty()) {
+            val name = pending.removeFirst()
+            if (name in modules) continue
+            val module = parseModule(name, downloadVerified("$chunkDir/$name"))
+            modules[name] = module
+            module.deps.forEach { if (it !in modules) pending.addLast(it) }
+        }
+        for (module in modules.values) {
+            for ((dep, exported, _) in module.imports) {
+                if (exported !in modules.getValue(dep).exports) {
+                    error("${module.name} imports '$exported' from $dep, which does not export it — update this task")
+                }
+            }
+        }
 
-        val importMatch = Regex("""^import\{([^{}]*)\}from"[^"]+";?""").find(renderSrc)
-            ?: error("No leading import statement found in render chunk — the dist format may have changed, update this task")
-        val importDecls = parseSpecs(importMatch.groupValues[1])
-            .joinToString(",") { (imported, local) -> "$local=__elkExports.$imported" }
-        val (renderBody, renderExports) = stripExport(renderSrc.removeRange(importMatch.range), "render chunk")
+        // Topological order (dependencies first); cycles cannot be expressed with eager IIFEs.
+        val ordered = mutableListOf<String>()
+        val visitState = HashMap<String, Int>()
+        fun visit(name: String, path: List<String>) {
+            when (visitState[name]) {
+                2 -> return
+                1 -> error("Circular chunk imports: ${(path + name).joinToString(" -> ")} — update this task")
+            }
+            visitState[name] = 1
+            for (dep in modules.getValue(name).deps) visit(dep, path + name)
+            visitState[name] = 2
+            ordered.add(name)
+        }
+        visit(renderName, emptyList())
 
-        if ("render" !in renderExports) {
+        if ("render" !in modules.getValue(renderName).exports) {
             error("Render chunk does not export a 'render' function — the dist format may have changed, update this task")
         }
-        if (renderBody.contains("./chunk") || Regex("""\bimport\s*\(""").containsMatchIn(renderBody)) {
-            error("Render chunk still references other module files after conversion — the dist format may have changed, update this task")
-        }
+        val totalBodyLength = modules.values.sumOf { it.body.length }
+        println("Bundling ${ordered.size} chunks (${totalBodyLength / 1024} KB of module bodies)")
 
         // Registered layout names, parsed from the entry so future upstream additions are picked up
         val baseAlgorithm = Regex("""name:"elk",loader:\w+,algorithm:"([^"]+)"""").find(entry)?.groupValues?.get(1)
@@ -259,21 +341,29 @@ tasks.register("updateMermaidElk") {
         ).joinToString(",")
         println("Registering layouts: elk ($baseAlgorithm), ${extraNames.joinToString(", ")}")
 
-        val output = buildString(helperBody.length + renderBody.length + 2048) {
+        // Chunk names are validated by chunkNamePattern, so quoting is enough to make a JS string literal.
+        fun jsString(name: String) = "\"$name\""
+
+        val output = buildString(totalBodyLength + modules.size * 512 + 4096) {
             append("/* mermaid-elk.js v$latestVersion — generated by `./gradlew updateMermaidElk` from ")
             append("@mermaid-js/layout-elk (ESM dist converted to a classic script). Do not edit manually. */\n")
             append("(function(){\n\"use strict\";\ntry{\n")
-            append("const __elkExports=(function(){\n")
-            append(helperBody)
-            append("\nreturn{")
-            append(helperExports.entries.joinToString(",") { "${it.key}:${it.value}" })
-            append("};})();\n")
-            append("const __elkModule=(function(){\n")
-            append("const ").append(importDecls).append(";\n")
-            append(renderBody)
-            append("\nreturn{")
-            append(renderExports.entries.joinToString(",") { "${it.key}:${it.value}" })
-            append("};})();\n")
+            append("const __elkModules={};\n")
+            append("const __elkLazyImport=function(name){return Promise.reject(new Error(\"[MermaidVisualizer] mermaid-elk.js: lazy chunk '\"+name+\"' is not bundled\"));};\n")
+            for (name in ordered) {
+                val module = modules.getValue(name)
+                append("__elkModules[").append(jsString(name)).append("]=(function(){\n")
+                if (module.imports.isNotEmpty()) {
+                    append("const ")
+                    append(module.imports.joinToString(",") { (dep, exported, local) -> "$local=__elkModules[${jsString(dep)}].$exported" })
+                    append(";\n")
+                }
+                append(module.body)
+                append("\nreturn{")
+                append(module.exports.entries.joinToString(",") { "${it.key}:${it.value}" })
+                append("};})();\n")
+            }
+            append("const __elkModule=__elkModules[").append(jsString(renderName)).append("];\n")
             append("const __elkLoader=async function(){return __elkModule;};\n")
             append("if(globalThis.mermaid&&typeof globalThis.mermaid.registerLayoutLoaders===\"function\"){\n")
             append("globalThis.mermaid.registerLayoutLoaders([").append(loaderEntries).append("]);\n")
