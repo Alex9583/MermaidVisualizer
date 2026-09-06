@@ -86,10 +86,23 @@ import static com.intellij.psi.TokenType.*;
 WHITESPACE = [ \t]+
 NEWLINE = \r\n | \r | \n
 DIGIT = [0-9]
-NUMBER = {DIGIT}+ ("." {DIGIT}+)?
+// Optional sign and leading dot so xychart data like `.98` / `-3.4` are numbers.
+NUMBER = "-"? ({DIGIT}+ ("." {DIGIT}+)? | "." {DIGIT}+)
 ID_CHAR = [a-zA-Z0-9_]
 IDENTIFIER = [a-zA-Z_] {ID_CHAR}*
 HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
+
+// Free text token (node ids with unicode/punctuation, labels, dates, `#f9f`, `$tags`, `br/`...).
+// Excludes every character that can start or continue an arrow (`- . < > = ~`), `*`, `@`, `&`, `+`, `!`, `?`
+// so an identifier stops right before a glued arrow (`Alice-->>Bob`, `A..>B`) or a metadata block (`B@{ ... }`).
+// `.` and `-` are only allowed inside the token when followed by a plain text char (keeps `x.com`,
+// `v1.2.3`, `Réseau-local`, `2024-01-01` whole, but stops before `..>`, `-.->`, `.->`). At least one
+// letter/digit is required, so pure punctuation runs (`/`, `...`) fall through to the SYMBOL rule instead.
+// Every punctuation char in the class is escaped: JFlex 1.9 treats `&&`, `||`, `--`, `~~` as set operators.
+TEXT_CHAR = [^ \t\r\n\"\'\[\]\{\}\(\)\:\;\|\,\-\.\<\>\=\~\*\@\&\+\!\?]
+TEXT_UNIT = {TEXT_CHAR} | "." {TEXT_CHAR}
+WORD_CHAR = [:letter:] | [:digit:] | "_"
+TEXT      = {TEXT_UNIT}* {WORD_CHAR} {TEXT_UNIT}* ("-" {TEXT_CHAR} {TEXT_UNIT}*)*
 
 %state NORMAL
 %state AFTER_FLOWCHART
@@ -160,7 +173,13 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
                                       if (isKeyword(t)) return KEYWORD;
                                       return IDENTIFIER; }
 
-    .                               { yypushback(1); yybegin(NORMAL); }
+    // Numbers and non-ASCII identifiers at line start (`2002 : LinkedIn`, `Réseau --> X`) — NUMBER first so an
+    // equal-length tie resolves to it.
+    {NUMBER}                        { yybegin(NORMAL); return NUMBER; }
+    {TEXT}                          { yybegin(NORMAL); return IDENTIFIER; }
+
+    // `[^]` (not `.`): under %unicode `.` excludes \u000B \u000C \u0085 \u2028 \u2029, which would otherwise be unmatched.
+    [^]                             { yypushback(1); yybegin(NORMAL); }
 }
 
 // After "flowchart" or "graph" — direction keywords recognized here only
@@ -168,9 +187,15 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
     {WHITESPACE}                    { return WHITE_SPACE; }
     "LR" | "RL" | "TD" | "TB" | "BT"  { yybegin(NORMAL); return KEYWORD; }
     {NEWLINE}                       { yybegin(YYINITIAL); return WHITE_SPACE; }
-    .                               { yypushback(1); yybegin(NORMAL); }
+    [^]                             { yypushback(1); yybegin(NORMAL); }
 }
 
+// JFlex picks the longest match; on equal length the EARLIER rule wins; the order of alternatives
+// inside one `|` rule is irrelevant. Arrows are listed before the text rules so they win at equal
+// length (`->` vs a lone `-`), and TEXT cannot contain arrow characters, so glued arrows
+// (`A-->B`, `Alice->>Bob`) split correctly. Known limitation: `Alice-xBob` stays one HYPHEN_ID
+// (excluding an `x`-initial tail would break flowchart ids like `pre-xfer`); `Alice -x Bob`,
+// `Alice--xBob` and `Alice-)Bob` work.
 <NORMAL> {
     {NEWLINE}                       { yybegin(YYINITIAL); return WHITE_SPACE; }
     {WHITESPACE}                    { return WHITE_SPACE; }
@@ -227,14 +252,22 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
     | "//-"
     | "\\\\-"
     | "-->>"
+    | "-->+"
+    | "-->-"
     | "-->"
     | "---"
     | "==>"
     | "-.->"
     | "->>"
+    | "->+"
+    | "->-"
+    | "->"
     | "<--"
     | "<-"
     | "-.-"
+    | "-."
+    | ".->"
+    | ".."
     | "=="
     | "--"
     | "--x"
@@ -249,13 +282,21 @@ HYPHEN_ID = [a-zA-Z_] {ID_CHAR}* ("-" {ID_CHAR}+)*
     ";"                             { return SEMICOLON; }
     ","                             { return COMMA; }
 
+    // ZenUML stereotypes (`@Actor`, `@Boundary`, `@Starter(...)`) are one symbol, never a node ref.
+    // A bare `@` (`A@{ shape: ... }`, edge ids `e1@-->`) falls through to the SYMBOL fallback below.
+    "@" [a-zA-Z_] {ID_CHAR}*        { return SYMBOL; }
+
     {NUMBER}                        { return NUMBER; }
 
     {HYPHEN_ID}                     { String t = yytext().toString();
                                       if (isKeyword(t)) return KEYWORD;
                                       return IDENTIFIER; }
 
-    [^ \t\r\n\"\'\[\]\{\}\(\)\:\;\|\,]+  { return IDENTIFIER; }
+    {TEXT}                          { return IDENTIFIER; }
+
+    // Last resort: any other single character (`@`, `=`, `<`, `>`, `~`, `*`, lone `-`, `&`, `/`...).
+    // Must be `[^]` so nothing is ever unmatched (see YYINITIAL).
+    [^]                             { return SYMBOL; }
 }
 
 <STRING_D> {

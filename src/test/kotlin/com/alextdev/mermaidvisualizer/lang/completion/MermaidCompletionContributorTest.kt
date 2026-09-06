@@ -407,4 +407,20 @@ class MermaidCompletionContributorTest : BasePlatformTestCase() {
         assertEquals("flowchart TD", myFixture.editor.document.text.trimEnd())
     }
 
+    // ── Glued arrows and `@{ ... }` metadata (lexer text model) ─────────
+
+    fun testNodeNameAfterGluedArrow() {
+        val completions = completionsAt(
+            "sequenceDiagram\n    participant Alice\n    participant Bob\n    Alice->><caret>"
+        )
+        assertTrue("Expected Bob", completions.contains("Bob"))
+        assertTrue("Expected Alice", completions.contains("Alice"))
+    }
+
+    fun testNodeNameBeforeShapeMetadataNotPolluted() {
+        val completions = completionsAt("flowchart LR\n    A --> B@{ shape: person }\n    <caret>")
+        assertTrue("Expected B", completions.contains("B"))
+        assertFalse("Should not offer B@", completions.contains("B@"))
+        assertFalse("Should not offer @", completions.contains("@"))
+    }
 }

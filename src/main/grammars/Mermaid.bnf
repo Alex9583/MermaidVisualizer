@@ -33,6 +33,7 @@
     SEMICOLON      = "SEMICOLON"
     COMMA          = "COMMA"
     IDENTIFIER     = "IDENTIFIER"
+    SYMBOL         = "SYMBOL"
   ]
 }
 
@@ -110,6 +111,7 @@ private statementToken_ ::= <<consumeNonBlockKeyword>>
                            | PIPE
                            | SEMICOLON
                            | COMMA
+                           | SYMBOL
 
 // ===== Node reference — wraps IDENTIFIER with PsiNamedElement support =====
 nodeRef ::= IDENTIFIER {

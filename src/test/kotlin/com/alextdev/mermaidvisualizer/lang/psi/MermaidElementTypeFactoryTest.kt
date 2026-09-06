@@ -16,7 +16,7 @@ class MermaidElementTypeFactoryTest {
         "COMMENT", "DIRECTIVE", "DIAGRAM_TYPE", "KEYWORD", "END_KW",
         "STRING_DOUBLE", "STRING_SINGLE", "ARROW", "NUMBER",
         "BRACKET_OPEN", "BRACKET_CLOSE", "COLON", "PIPE",
-        "SEMICOLON", "COMMA", "IDENTIFIER"
+        "SEMICOLON", "COMMA", "IDENTIFIER", "SYMBOL"
     )
     fun testCreateTokenReturnsCanonicalInstance(name: String) {
         val expected = MermaidTokenTypes::class.java.getField(name).get(null)

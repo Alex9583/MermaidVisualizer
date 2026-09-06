@@ -94,4 +94,30 @@ class MermaidUnusedNodeInspectionTest : BasePlatformTestCase() {
         assertFalse("Dog declaration should be removed", text.contains("class Dog"))
         assertTrue("Animal declaration should remain", text.contains("class Animal"))
     }
+
+    // ── Arrows glued to participant names (lexer text model) ────────────
+
+    fun testSequenceGluedArrowUsesParticipant() {
+        myFixture.configureByText(
+            "test.mmd",
+            "sequenceDiagram\n    participant Alice\n    participant Bob\n    Alice->>Bob: Hello"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    fun testSequenceGluedActivationArrowsUseParticipants() {
+        myFixture.configureByText(
+            "test.mmd",
+            "sequenceDiagram\n    participant Alice\n    participant Bob\n    Alice->>+Bob: Hello\n    Bob-->>-Alice: Hi"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    fun testSequenceGluedSelfMessageStillFlagsUnused() {
+        myFixture.configureByText(
+            "test.mmd",
+            "sequenceDiagram\n    participant Alice\n    participant <warning descr=\"Node 'Bob' declared as 'participant' but never used\">Bob</warning>\n    Alice->>Alice: Self"
+        )
+        myFixture.checkHighlighting()
+    }
 }

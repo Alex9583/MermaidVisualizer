@@ -147,4 +147,40 @@ class MermaidStructureViewTest : BasePlatformTestCase() {
         val factory = MermaidStructureViewFactory()
         assertNull("Should return null for non-Mermaid files", factory.getStructureViewBuilder(psi))
     }
+
+    // ── Lexer text model: no phantom nodes from `@`, arrows or symbols ──
+
+    fun testShapeMetadataDoesNotCreatePhantomNode() {
+        val texts = collectPresentableTexts(getStructureRoot("flowchart LR\n    U@{ shape: person }\n    U --> V"))
+        assertTrue("Should contain U", texts.contains("U"))
+        assertTrue("Should contain V", texts.contains("V"))
+        assertFalse("Should not contain @", texts.contains("@"))
+        assertFalse("Should not contain U@", texts.contains("U@"))
+    }
+
+    fun testZenumlStereotypeIsNotANode() {
+        val texts = collectPresentableTexts(getStructureRoot("zenuml\n    @Actor Client\n    Client->Server.call()"))
+        assertTrue("Should contain Client", texts.contains("Client"))
+        assertFalse("Should not contain Actor", texts.contains("Actor"))
+        assertFalse("Should not contain @Actor", texts.contains("@Actor"))
+    }
+
+    fun testGluedSequenceArrowDoesNotCreatePhantomNode() {
+        val texts = collectPresentableTexts(getStructureRoot("sequenceDiagram\n    participant Bob\n    Alice->>Bob: Hi"))
+        assertTrue("Should contain Bob", texts.contains("Bob"))
+        assertFalse("Should not contain an arrow node", texts.any { it.contains("->>") })
+    }
+
+    fun testWardleyEvolutionArrowIsNotANode() {
+        val texts = collectPresentableTexts(getStructureRoot("wardley-beta\n    evolution Genesis -> Custom"))
+        assertTrue("Should contain Genesis", texts.contains("Genesis"))
+        assertFalse("Should not contain ->", texts.contains("->"))
+    }
+
+    fun testEdgeIdIsNotANode() {
+        val texts = collectPresentableTexts(getStructureRoot("flowchart LR\n    A e1@--> B"))
+        assertTrue("Should contain A", texts.contains("A"))
+        assertTrue("Should contain B", texts.contains("B"))
+        assertFalse("Edge id e1 is not a node", texts.contains("e1"))
+    }
 }

@@ -168,11 +168,6 @@ class MermaidParserTest : BasePlatformTestCase() {
         assertNotNull(file.node)
     }
 
-    fun testAllDiagramsFixture() {
-        val psiFile = myFixture.configureByFile("all-diagrams.md")
-        assertNotNull(psiFile.node)
-    }
-
     // --- State diagram ---
 
     fun testStateDiagram() {

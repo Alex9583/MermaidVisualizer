@@ -175,4 +175,47 @@ class MermaidPsiUtilTest : BasePlatformTestCase() {
         assertFalse("Label inside brackets is not a node name", MermaidPsiUtil.isNodeName(label))
         assertTrue("A is a node name", MermaidPsiUtil.isNodeName(a))
     }
+
+    // ── Glued arrows, pipes, edge ids, `@{ ... }` (lexer text model) ────
+
+    fun testCollectUsedIdentifiersGluedArrow() {
+        val psi = myFixture.configureByText(
+            "test.mmd",
+            "sequenceDiagram\n    participant Alice\n    participant Bob\n    Alice->>Bob: Hello"
+        )
+        val body = PsiTreeUtil.findChildOfType(psi, MermaidDiagramBody::class.java)!!
+        val used = MermaidPsiUtil.collectUsedIdentifiers(body, MermaidDiagramKind.SEQUENCE)
+        assertEquals(setOf("Alice", "Bob"), used.map { it.name }.toSet())
+    }
+
+    fun testIsInsidePipes() {
+        val psi = myFixture.configureByText("test.mmd", "flowchart LR\n    A -->|a -> b| B")
+        val nodeRefs = PsiTreeUtil.findChildrenOfType(psi, MermaidNodeRef::class.java)
+        assertTrue("b is inside the pipes", MermaidPsiUtil.isInsidePipes(nodeRefs.first { it.name == "b" }))
+        assertFalse("A is before the pipes", MermaidPsiUtil.isInsidePipes(nodeRefs.first { it.name == "A" }))
+        assertFalse("B is after the pipes", MermaidPsiUtil.isInsidePipes(nodeRefs.first { it.name == "B" }))
+    }
+
+    fun testIsEdgeId() {
+        val psi = myFixture.configureByText("test.mmd", "flowchart LR\n    A e1@--> B")
+        val nodeRefs = PsiTreeUtil.findChildrenOfType(psi, MermaidNodeRef::class.java)
+        val e1 = nodeRefs.first { it.name == "e1" }
+        assertTrue("e1 is an edge id", MermaidPsiUtil.isEdgeId(e1))
+        assertFalse("edge id is not a node name", MermaidPsiUtil.isNodeName(e1))
+        assertFalse("A is not an edge id", MermaidPsiUtil.isEdgeId(nodeRefs.first { it.name == "A" }))
+        assertFalse("B is not an edge id", MermaidPsiUtil.isEdgeId(nodeRefs.first { it.name == "B" }))
+    }
+
+    fun testNodeBeforeShapeMetadataIsANodeName() {
+        val psi = myFixture.configureByText("test.mmd", "flowchart LR\n    A --> B@{ shape: person }")
+        val nodeRefs = PsiTreeUtil.findChildrenOfType(psi, MermaidNodeRef::class.java)
+        assertTrue("B before @{...} is a node name", MermaidPsiUtil.isNodeName(nodeRefs.first { it.name == "B" }))
+        assertFalse("shape is inside braces", MermaidPsiUtil.isNodeName(nodeRefs.first { it.name == "shape" }))
+    }
+
+    fun testCollectAllIdentifiersIgnoresSymbols() {
+        val psi = myFixture.configureByText("test.mmd", "flowchart LR\n    A --> B@{ shape: person }")
+        val body = PsiTreeUtil.findChildOfType(psi, MermaidDiagramBody::class.java)!!
+        assertEquals(setOf("A", "B", "shape", "person"), MermaidPsiUtil.collectAllIdentifiers(body))
+    }
 }

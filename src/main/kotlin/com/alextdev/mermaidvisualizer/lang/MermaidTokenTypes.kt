@@ -25,6 +25,8 @@ object MermaidTokenTypes {
     @JvmField val COMMA = MermaidTokenType("COMMA")
     @JvmField val IDENTIFIER = MermaidTokenType("IDENTIFIER")
     @JvmField val END_KW = MermaidTokenType("END_KW")
+    /** Any single character that is neither identifier text nor an arrow (`@`, `=`, `<`, `>`, `~`, `*`, lone `-`...). Never a node ref. */
+    @JvmField val SYMBOL = MermaidTokenType("SYMBOL")
 }
 
 object MermaidTokenSets {
