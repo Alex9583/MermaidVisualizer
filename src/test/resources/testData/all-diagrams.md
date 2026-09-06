@@ -13,6 +13,25 @@ flowchart TD
     D --> E
 ```
 
+New shapes (`person`, `browser`, `console`, `folder`, `bucket`) and collapsible subgraphs (v11.17.0+):
+
+```mermaid
+flowchart LR
+    U@{ shape: person, label: "User" }
+    W@{ shape: browser, label: "Web app" }
+    S@{ shape: console, label: "API server" }
+    F@{ shape: folder, label: "Config" }
+    B@{ shape: bucket, label: "Object storage" }
+    U --> W --> S
+    S --> F
+    S --> B
+    subgraph legacy [Legacy services]
+        L1[Batch job] --> L2[Mainframe]
+    end
+    S --> L1
+    legacy@{ view: collapsed }
+```
+
 ## 2. Graph (flowchart alias)
 
 ```mermaid
@@ -73,6 +92,27 @@ erDiagram
         int orderNumber
         date created
     }
+```
+
+Subgraphs, nested subgraphs and relationships between subgraphs (v11.17.0+):
+
+```mermaid
+erDiagram
+    subgraph sales
+        CUSTOMER ||--o{ ORDER : places
+    end
+    subgraph fulfillment
+        ORDER ||--|{ LINE-ITEM : contains
+        subgraph warehouse
+            PRODUCT
+            PRODUCT {
+                string sku
+                int stock
+            }
+        end
+    end
+    LINE-ITEM }o--|| PRODUCT : references
+    sales ||--|| fulfillment : feeds
 ```
 
 ## 7. User Journey
@@ -200,6 +240,18 @@ xychart-beta
     y-axis "Revenue (in $)" 4000 --> 11000
     bar [5000, 6000, 7500, 8200, 9500]
     line [5000, 6000, 7500, 8200, 9500]
+```
+
+Named series with an automatic legend (v11.17.0+):
+
+```mermaid
+xychart-beta
+    title "Request latency"
+    x-axis ["90d", "60d", "30d", "7d", "1d", "Current"]
+    y-axis "Seconds" 0 --> 198.2
+    line "avg" [48.1, 41.5, 45.7, 72.8, 67.7, 59.9]
+    line "p50" [38.2, 36.8, 39.7, 54.5, 49.0, 38.4]
+    bar "p95" [112.2, 75.3, 103.0, 177.0, 180.2, 109.4]
 ```
 
 ## 15. Sankey (beta)

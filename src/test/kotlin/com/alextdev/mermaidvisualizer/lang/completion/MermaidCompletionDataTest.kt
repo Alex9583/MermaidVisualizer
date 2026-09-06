@@ -95,7 +95,7 @@ class MermaidCompletionDataTest {
         )
         assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.CLASS).isEmpty())
         assertEquals(setOf("subgraph"), MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.SWIMLANE))
-        assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.ER).isEmpty())
+        assertEquals(setOf("subgraph"), MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.ER))
         assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.STATE).isEmpty())
         assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.CYNEFIN).isEmpty())
         assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.RAILROAD).isEmpty())
@@ -172,6 +172,14 @@ class MermaidCompletionDataTest {
         val keywords = MermaidCompletionData.keywordsFor(MermaidDiagramKind.SWIMLANE)
         assertTrue(keywords.containsAll(setOf("subgraph", "end")))
         assertFalse(keywords.contains("participant"))
+    }
+
+    @Test
+    fun testErKeywordsContainSubgraph() {
+        val keywords = MermaidCompletionData.keywordsFor(MermaidDiagramKind.ER)
+        assertTrue(keywords.containsAll(setOf("subgraph", "end")))
+        assertFalse(keywords.contains("participant"))
+        assertFalse(keywords.contains("classDef"))
     }
 
     @Test

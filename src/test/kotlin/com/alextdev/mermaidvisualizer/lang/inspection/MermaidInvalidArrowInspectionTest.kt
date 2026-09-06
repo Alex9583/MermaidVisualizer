@@ -92,6 +92,33 @@ class MermaidInvalidArrowInspectionTest : BasePlatformTestCase() {
         myFixture.checkHighlighting()
     }
 
+    fun testValidErArrowsInsideAndBetweenSubgraphs() {
+        // ER subgraphs (Mermaid 11.17.0+): no parse error on `end`, arrows validated as ER arrows
+        myFixture.configureByText(
+            "test.mmd",
+            "erDiagram\n" +
+            "    subgraph title1\n" +
+            "        A1 ||--|| A2 : links\n" +
+            "    end\n" +
+            "    subgraph title2\n" +
+            "        B1 ||--o{ B2 : links\n" +
+            "    end\n" +
+            "    title1 ||--|| title2 : links"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    fun testInvalidFlowchartArrowInsideErSubgraph() {
+        myFixture.configureByText(
+            "test.mmd",
+            "erDiagram\n" +
+            "    subgraph title1\n" +
+            "        A1 <warning descr=\"Arrow '-->' is not valid in erDiagram diagrams. Valid: ||--o{, ||--|{, }o--||, }|--||, ||--||, }o--o{, }|--|{\">--></warning> A2\n" +
+            "    end"
+        )
+        myFixture.checkHighlighting()
+    }
+
     fun testQuickFixSuggestsReplacement() {
         myFixture.configureByText("test.mmd", "flowchart LR\n    A ->> B")
         myFixture.enableInspections(MermaidInvalidArrowInspection())

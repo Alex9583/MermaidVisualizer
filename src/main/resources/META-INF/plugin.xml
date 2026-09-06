@@ -14,7 +14,7 @@
             <li>Open in new tab — pop any diagram into its own full-size preview tab</li>
             <li>Export diagrams as SVG or PNG — copy to clipboard or save to file</li>
             <li>Automatic dark/light theme matching with your IDE</li>
-            <li>All 32+ Mermaid diagram types — fully offline with bundled Mermaid.js (v11.16.0)</li>
+            <li>All 32+ Mermaid diagram types — fully offline with bundled Mermaid.js (v11.17.2)</li>
             <li>ELK layout support — <code>layout: elk</code> and its options (e.g. <code>mergeEdges</code>) in the YAML frontmatter work out of the box</li>
         </ul>
 

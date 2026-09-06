@@ -282,6 +282,22 @@ class MermaidCompletionContributorTest : BasePlatformTestCase() {
         assertTrue("Expected service", completions.contains("service"))
     }
 
+    // ── ER subgraphs (Mermaid 11.17.0) ─────────────────────────────────
+
+    fun testErSubgraphKeyword() {
+        val completions = completionsAt("erDiagram\n    <caret>")
+        assertTrue("Expected subgraph in erDiagram", completions.contains("subgraph"))
+        assertFalse("Should not offer end outside a block", completions.contains("end"))
+        assertFalse("Should not offer classDef", completions.contains("classDef"))
+        assertFalse("Should not offer participant", completions.contains("participant"))
+    }
+
+    fun testEndInsideErSubgraph() {
+        val completions = completionsAt("erDiagram\n    subgraph title1\n        <caret>\n    end")
+        assertTrue("Expected end inside ER subgraph", completions.contains("end"))
+        assertTrue("Expected nested subgraph", completions.contains("subgraph"))
+    }
+
     // ── Arrow completion ───────────────────────────────────────────────
 
     fun testArrowsInFlowchartAfterIdentifier() {

@@ -29,6 +29,13 @@ class MermaidFoldingBuilderTest : BasePlatformTestCase() {
         assertEquals(1, regions.size)
     }
 
+    fun testErSubgraphFolds() {
+        val regions = getFoldRegions(
+            "erDiagram\n    subgraph title1\n        A1 ||--|| A2 : links\n    end"
+        )
+        assertEquals(1, regions.size)
+    }
+
     fun testAltElseFoldsAsOneRegion() {
         val regions = getFoldRegions(
             "sequenceDiagram\n    alt success\n        A->>B: ok\n    else failure\n        A->>B: error\n    end"

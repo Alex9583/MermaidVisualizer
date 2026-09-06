@@ -106,6 +106,17 @@ class MermaidStructureViewTest : BasePlatformTestCase() {
         assertFalse("Should not contain places (after colon)", texts.contains("places"))
     }
 
+    fun testErDiagramWithSubgraph() {
+        val root = getStructureRoot(
+            "erDiagram\n    subgraph title1\n        A1 ||--|| A2 : links\n    end\n    title1 ||--|| B1 : links"
+        )
+        val texts = collectPresentableTexts(root)
+        assertTrue("Should contain subgraph block", texts.any { it.startsWith("subgraph") })
+        assertTrue("Should contain A1", texts.contains("A1"))
+        assertTrue("Should contain B1", texts.contains("B1"))
+        assertFalse("Should not contain links (after colon)", texts.contains("links"))
+    }
+
     // ── Single-diagram optimization ─────────────────────────────────────
 
     fun testSingleDiagramSkipsDiagramNode() {
