@@ -4,6 +4,7 @@ import com.alextdev.mermaidvisualizer.MyMessageBundle
 import com.alextdev.mermaidvisualizer.lang.MermaidTokenTypes
 import com.alextdev.mermaidvisualizer.lang.psi.MermaidBlockContent
 import com.alextdev.mermaidvisualizer.lang.psi.MermaidFlowchartDiagram
+import com.alextdev.mermaidvisualizer.lang.psi.MermaidGenericDiagram
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
@@ -20,6 +21,17 @@ import com.intellij.psi.TokenType
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.util.ProcessingContext
+
+/** Diagram kinds that accept a `direction X` statement (flowchart family, use case, agentflow). */
+private val DIRECTION_KINDS = setOf(
+    MermaidDiagramKind.FLOWCHART, MermaidDiagramKind.GRAPH,
+    MermaidDiagramKind.USECASE, MermaidDiagramKind.AGENTFLOW,
+)
+
+/** Diagram kinds whose header line takes the direction right after the diagram type (`flowchart LR`). */
+private val HEADER_DIRECTION_KINDS = setOf(
+    MermaidDiagramKind.FLOWCHART, MermaidDiagramKind.GRAPH, MermaidDiagramKind.AGENTFLOW,
+)
 
 /**
  * Provides context-aware keyword completion inside diagram bodies.
@@ -74,9 +86,11 @@ class MermaidKeywordProvider : CompletionProvider<CompletionParameters>() {
         kind: MermaidDiagramKind,
         result: CompletionResultSet,
     ) {
-        if (kind != MermaidDiagramKind.FLOWCHART && kind != MermaidDiagramKind.GRAPH) return
+        if (kind !in DIRECTION_KINDS) return
 
-        if (isAfterDirectionKeyword(position) || isOnDiagramTypeLine(position)) {
+        if (isAfterDirectionKeyword(position) ||
+            (kind in HEADER_DIRECTION_KINDS && isOnDiagramTypeLine(position))
+        ) {
             addDirectionElements(result)
         }
     }
@@ -90,14 +104,17 @@ class MermaidKeywordProvider : CompletionProvider<CompletionParameters>() {
     }
 
     private fun isOnDiagramTypeLine(position: PsiElement): Boolean {
-        val flowchartDiagram = PsiTreeUtil.getParentOfType(position, MermaidFlowchartDiagram::class.java)
-            ?: return false
-        val diagramTypeNode = flowchartDiagram.node.findChildByType(MermaidTokenTypes.DIAGRAM_TYPE)
+        val diagram = PsiTreeUtil.getParentOfType(
+            position,
+            MermaidFlowchartDiagram::class.java,
+            MermaidGenericDiagram::class.java,
+        ) ?: return false
+        val diagramTypeNode = diagram.node.findChildByType(MermaidTokenTypes.DIAGRAM_TYPE)
             ?: return false
 
         val diagramTypeOffset = diagramTypeNode.startOffset
         val positionOffset = position.textOffset
-        val text = flowchartDiagram.containingFile.text
+        val text = diagram.containingFile.text
         if (diagramTypeOffset > text.length || positionOffset > text.length) return false
 
         val diagramTypeLine = StringUtil.offsetToLineNumber(text, diagramTypeOffset)

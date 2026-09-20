@@ -55,6 +55,16 @@ class MermaidSettingsConfigurableTest : BasePlatformTestCase() {
         assertEquals(MermaidTheme.NEUTRAL, settings.state.theme)
     }
 
+    fun testApplyPersistsLayout() {
+        configurable.createComponent()
+        val settings = service<MermaidSettings>()
+        settings.loadState(MermaidSettings.State(layout = MermaidLayout.DAGRE))
+        configurable.reset()
+        assertFalse("Reset should clear modifications", configurable.isModified)
+        configurable.apply()
+        assertEquals(MermaidLayout.DAGRE, settings.state.layout)
+    }
+
     fun testApplyClampsInvalidMaxTextSize() {
         configurable.createComponent()
         val settings = service<MermaidSettings>()

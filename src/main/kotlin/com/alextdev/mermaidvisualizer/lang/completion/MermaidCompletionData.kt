@@ -14,6 +14,8 @@ import com.intellij.psi.util.PsiTreeUtil
 
 enum class MermaidDiagramKind(val keyword: String, val displayKey: String) {
     FLOWCHART("flowchart", "completion.mermaid.diagram.flowchart"),
+    /** `flowchart-elk` header: a flowchart laid out by ELK. Shares the flowchart PSI and is detected as [FLOWCHART]. */
+    FLOWCHART_ELK("flowchart-elk", "completion.mermaid.diagram.flowchartElk"),
     GRAPH("graph", "completion.mermaid.diagram.graph"),
     SEQUENCE("sequenceDiagram", "completion.mermaid.diagram.sequence"),
     CLASS("classDiagram", "completion.mermaid.diagram.class"),
@@ -53,6 +55,8 @@ enum class MermaidDiagramKind(val keyword: String, val displayKey: String) {
     RAILROAD_ABNF("railroad-abnf-beta", "completion.mermaid.diagram.railroad"),
     RAILROAD_PEG("railroad-peg-beta", "completion.mermaid.diagram.railroad"),
     SWIMLANE("swimlane-beta", "completion.mermaid.diagram.swimlane"),
+    USECASE("usecase-beta", "completion.mermaid.diagram.usecase"),
+    AGENTFLOW("agentflow-beta", "completion.mermaid.diagram.agentflow"),
 }
 
 /**
@@ -177,6 +181,18 @@ object MermaidCompletionData {
 
     private val SWIMLANE_KEYWORDS = setOf("subgraph", "end")
 
+    /** UML use case diagrams (Mermaid 12): `systemBoundary ... end`, `note for X`, `json X@{...}`, `..> : include|extend`. */
+    private val USECASE_KEYWORDS = setOf(
+        "actor", "systemBoundary", "end", "direction", "note", "for", "json",
+        "classDef", "class", "style", "include", "extend",
+    )
+
+    /** Agentflow diagrams (Mermaid 12): `flow X ... end`, `global ... end`, `connector X`. */
+    private val AGENTFLOW_KEYWORDS = setOf(
+        "flow", "global", "connector", "end", "direction",
+        "style", "linkStyle", "classDef", "class", "click", "interpolate",
+    )
+
     /** IR constructors for railroad-beta (explicit constructor notation). */
     private val RAILROAD_IR_KEYWORDS = setOf(
         "title", "terminal", "nonterminal", "sequence", "choice",
@@ -189,6 +205,7 @@ object MermaidCompletionData {
     private val KEYWORDS_BY_KIND: Map<MermaidDiagramKind, Set<String>> by lazy {
         val map = mapOf(
             MermaidDiagramKind.FLOWCHART to FLOWCHART_KEYWORDS,
+            MermaidDiagramKind.FLOWCHART_ELK to FLOWCHART_KEYWORDS,
             MermaidDiagramKind.GRAPH to FLOWCHART_KEYWORDS,
             MermaidDiagramKind.SEQUENCE to SEQUENCE_KEYWORDS,
             MermaidDiagramKind.CLASS to CLASS_KEYWORDS,
@@ -228,6 +245,8 @@ object MermaidCompletionData {
             MermaidDiagramKind.RAILROAD_ABNF to RAILROAD_NOTATION_KEYWORDS,
             MermaidDiagramKind.RAILROAD_PEG to RAILROAD_NOTATION_KEYWORDS,
             MermaidDiagramKind.SWIMLANE to SWIMLANE_KEYWORDS,
+            MermaidDiagramKind.USECASE to USECASE_KEYWORDS,
+            MermaidDiagramKind.AGENTFLOW to AGENTFLOW_KEYWORDS,
         )
         val missing = MermaidDiagramKind.entries.toSet() - map.keys
         check(missing.isEmpty()) { "KEYWORDS_BY_KIND missing entries for: $missing" }
@@ -246,16 +265,21 @@ object MermaidCompletionData {
     private val SEQUENCE_BLOCK_KEYWORDS = setOf(
         "loop", "alt", "opt", "par", "critical", "break", "rect", "box",
     )
+    private val USECASE_BLOCK_KEYWORDS = setOf("systemBoundary")
+    private val AGENTFLOW_BLOCK_KEYWORDS = setOf("flow", "global")
 
     /** Block keywords that open a block...end structure for a given diagram kind. */
     fun blockKeywordsFor(kind: MermaidDiagramKind): Set<String> = when (kind) {
         MermaidDiagramKind.FLOWCHART,
+        MermaidDiagramKind.FLOWCHART_ELK,
         MermaidDiagramKind.GRAPH,
         MermaidDiagramKind.SWIMLANE,
         MermaidDiagramKind.ER,
         -> FLOWCHART_BLOCK_KEYWORDS
         MermaidDiagramKind.SEQUENCE -> SEQUENCE_BLOCK_KEYWORDS
         MermaidDiagramKind.BLOCK -> setOf("block")
+        MermaidDiagramKind.USECASE -> USECASE_BLOCK_KEYWORDS
+        MermaidDiagramKind.AGENTFLOW -> AGENTFLOW_BLOCK_KEYWORDS
         MermaidDiagramKind.CLASS,
         MermaidDiagramKind.STATE,
         MermaidDiagramKind.STATE_V1,
@@ -297,6 +321,7 @@ object MermaidCompletionData {
     fun dividerKeywordsFor(kind: MermaidDiagramKind): Set<String> = when (kind) {
         MermaidDiagramKind.SEQUENCE -> setOf("else", "and")
         MermaidDiagramKind.FLOWCHART,
+        MermaidDiagramKind.FLOWCHART_ELK,
         MermaidDiagramKind.GRAPH,
         MermaidDiagramKind.CLASS,
         MermaidDiagramKind.ER,
@@ -335,6 +360,8 @@ object MermaidCompletionData {
         MermaidDiagramKind.RAILROAD_ABNF,
         MermaidDiagramKind.RAILROAD_PEG,
         MermaidDiagramKind.SWIMLANE,
+        MermaidDiagramKind.USECASE,
+        MermaidDiagramKind.AGENTFLOW,
         -> emptySet()
     }
 
@@ -396,9 +423,30 @@ object MermaidCompletionData {
         ArrowEntry("-->", "completion.mermaid.arrow.transition"),
     )
 
+    /** Use case relationships. `--` / `---` (markerless) and `-- "text" -->` fragments are accepted by the inspection. */
+    private val USECASE_ARROWS = listOf(
+        ArrowEntry("-->", "completion.mermaid.arrow.association"),
+        ArrowEntry("--->", "completion.mermaid.arrow.longSolidArrow"),
+        ArrowEntry("<--", "completion.mermaid.arrow.backwardAssociation"),
+        ArrowEntry("--|>", "completion.mermaid.arrow.generalization"),
+        ArrowEntry("..>", "completion.mermaid.arrow.includeExtend"),
+        ArrowEntry("--o", "completion.mermaid.arrow.circleEnd"),
+        ArrowEntry("o--", "completion.mermaid.arrow.circleStart"),
+        ArrowEntry("--x", "completion.mermaid.arrow.crossEnd"),
+    )
+
+    /** Agentflow edges: sequence `-->`, failure `--x`, reference `-.-`; `-- text -->` fragments are accepted by the inspection. */
+    private val AGENTFLOW_ARROWS = listOf(
+        ArrowEntry("-->", "completion.mermaid.arrow.sequenceEdge"),
+        ArrowEntry("--->", "completion.mermaid.arrow.longSolidArrow"),
+        ArrowEntry("--x", "completion.mermaid.arrow.failureEdge"),
+        ArrowEntry("-.-", "completion.mermaid.arrow.referenceEdge"),
+    )
+
     private val ARROWS_BY_KIND: Map<MermaidDiagramKind, List<ArrowEntry>> by lazy {
         val map = mapOf(
             MermaidDiagramKind.FLOWCHART to FLOWCHART_ARROWS,
+            MermaidDiagramKind.FLOWCHART_ELK to FLOWCHART_ARROWS,
             MermaidDiagramKind.GRAPH to FLOWCHART_ARROWS,
             MermaidDiagramKind.SEQUENCE to SEQUENCE_ARROWS,
             MermaidDiagramKind.CLASS to CLASS_ARROWS,
@@ -438,6 +486,8 @@ object MermaidCompletionData {
             MermaidDiagramKind.RAILROAD_ABNF to emptyList(),
             MermaidDiagramKind.RAILROAD_PEG to emptyList(),
             MermaidDiagramKind.SWIMLANE to FLOWCHART_ARROWS,
+            MermaidDiagramKind.USECASE to USECASE_ARROWS,
+            MermaidDiagramKind.AGENTFLOW to AGENTFLOW_ARROWS,
         )
         val missing = MermaidDiagramKind.entries.toSet() - map.keys
         check(missing.isEmpty()) { "ARROWS_BY_KIND missing entries for: $missing" }
@@ -462,9 +512,17 @@ object MermaidCompletionData {
 
     // ── Directive config ───────────────────────────────────────────────
 
-    val DIRECTIVE_CONFIG_KEYS = listOf("theme", "look", "fontFamily", "maxTextSize")
-    val DIRECTIVE_THEME_VALUES = listOf("default", "dark", "forest", "neutral")
+    val DIRECTIVE_CONFIG_KEYS = listOf("theme", "look", "layout", "fontFamily", "maxTextSize")
+    val DIRECTIVE_THEME_VALUES = listOf(
+        "default", "dark", "forest", "neutral",
+        "neo", "neo-dark", "redux", "redux-dark", "redux-color", "redux-dark-color",
+    )
     val DIRECTIVE_LOOK_VALUES = listOf("classic", "handDrawn", "neo")
+
+    /** Layout engines registered by Mermaid 12 (ELK is bundled and the default; dagre stays available). */
+    val DIRECTIVE_LAYOUT_VALUES = listOf(
+        "dagre", "elk", "elk.stress", "elk.force", "elk.mrtree", "elk.sporeOverlap", "elk.box", "elk.rectpacking",
+    )
 
     // ── Context detection ──────────────────────────────────────────────
 

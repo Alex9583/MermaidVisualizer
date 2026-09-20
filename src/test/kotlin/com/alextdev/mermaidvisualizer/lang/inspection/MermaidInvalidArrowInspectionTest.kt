@@ -119,6 +119,78 @@ class MermaidInvalidArrowInspectionTest : BasePlatformTestCase() {
         myFixture.checkHighlighting()
     }
 
+    fun testValidFlowchartElkArrows() {
+        myFixture.configureByText(
+            "test.mmd",
+            "flowchart-elk LR\n    A --> B\n    B -- text --> C\n    C ---> D\n    D -.-> A\n    A <--> D"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    fun testInvalidSequenceArrowInFlowchartElk() {
+        myFixture.configureByText(
+            "test.mmd",
+            "flowchart-elk LR\n    A <warning descr=\"Arrow '->>' is not valid in flowchart diagrams. Valid: -->, --->, ==>, -.->, --x, --o, <-->, ~~~\">->></warning> B"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    // ── Mermaid 12: use case + agentflow ────────────────────────────────
+
+    fun testValidUsecaseArrows() {
+        myFixture.configureByText(
+            "test.mmd",
+            "usecase-beta\n" +
+            "    actor Admin\n" +
+            "    actor Person\n" +
+            "    systemBoundary Orders\n" +
+            "        Checkout(\"Checkout\")\n" +
+            "    end\n" +
+            "    Admin --|> Person\n" +
+            "    Person --> Checkout\n" +
+            "    Checkout ..> : include Payment\n" +
+            "    Person starts@-- \"places order\" ---> Checkout\n" +
+            "    Checkout --- Payment\n" +
+            "    Payment <-- Admin"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    fun testInvalidSequenceArrowInUsecase() {
+        myFixture.configureByText(
+            "test.mmd",
+            "usecase-beta\n    Admin <warning descr=\"Arrow '->>' is not valid in usecase-beta diagrams. Valid: -->, --->, <--, --|>, ..>, --o, o--, --x\">->></warning> Person"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    fun testValidAgentflowArrows() {
+        myFixture.configureByText(
+            "test.mmd",
+            "agentflow-beta TB\n" +
+            "    global\n" +
+            "        corpus[\"Shared corpus\"]@{ shape: refdoc }\n" +
+            "    end\n" +
+            "    flow writer[\"Writer\"]\n" +
+            "        draft --> review\n" +
+            "        draft -.- corpus\n" +
+            "    end\n" +
+            "    check -- yes --> writer\n" +
+            "    check -- no --> fix\n" +
+            "    fix --x check\n" +
+            "    brief --> draft --> publish"
+        )
+        myFixture.checkHighlighting()
+    }
+
+    fun testInvalidThickArrowInAgentflow() {
+        myFixture.configureByText(
+            "test.mmd",
+            "agentflow-beta LR\n    a <warning descr=\"Arrow '==>' is not valid in agentflow-beta diagrams. Valid: -->, --->, --x, -.-\">==></warning> b"
+        )
+        myFixture.checkHighlighting()
+    }
+
     fun testQuickFixSuggestsReplacement() {
         myFixture.configureByText("test.mmd", "flowchart LR\n    A ->> B")
         myFixture.enableInspections(MermaidInvalidArrowInspection())

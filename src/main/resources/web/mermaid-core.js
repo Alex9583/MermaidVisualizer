@@ -101,6 +101,8 @@
             securityLevel: 'strict'
         };
         if (cfg.fontFamily) opts.fontFamily = cfg.fontFamily;
+        // Layout engine for diagrams without a front-matter `layout` (Mermaid 12 bundles ELK and defaults to it).
+        if (cfg.layout) opts.layout = cfg.layout;
         if (cfg.lineColor) {
             // themeVariables.lineColor overrides the chosen theme's edge/line color.
             // Primarily affects flowchart/graph edges; other diagram types use their own variables.

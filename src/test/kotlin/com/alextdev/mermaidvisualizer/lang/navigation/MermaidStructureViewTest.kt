@@ -117,6 +117,54 @@ class MermaidStructureViewTest : BasePlatformTestCase() {
         assertFalse("Should not contain links (after colon)", texts.contains("links"))
     }
 
+    fun testFlowchartElkLabel() {
+        val root = getStructureRoot("flowchart-elk TD\n    A --> B\n\nsequenceDiagram\n    X->>Y: hi")
+        val texts = collectPresentableTexts(root)
+        assertTrue("Should label the ELK flowchart with its type and direction (got $texts)", texts.contains("flowchart-elk TD"))
+        assertTrue("Should contain A", texts.contains("A"))
+    }
+
+    // ── Mermaid 12: use case + agentflow ────────────────────────────────
+
+    fun testUsecaseDiagramWithSystemBoundary() {
+        val root = getStructureRoot(
+            "usecase-beta\n" +
+            "    actor Staff(\"Order staff\")@{ type: hollow } <<Employee>>\n" +
+            "    systemBoundary ordering[\"Ordering System\"]\n" +
+            "        Checkout(\"Checkout\") <<Core>>:::critical\n" +
+            "    end\n" +
+            "    note for Checkout \"Validates the cart\"\n" +
+            "    Staff starts@-- \"places order\" ---> Checkout"
+        )
+        val texts = collectPresentableTexts(root)
+        assertTrue("Should contain systemBoundary block", texts.any { it.startsWith("systemBoundary") })
+        assertTrue("Should contain Staff", texts.contains("Staff"))
+        assertTrue("Should contain Checkout", texts.contains("Checkout"))
+        assertFalse("Stereotype text is not a node", texts.contains("Employee"))
+        assertFalse("Stereotype text is not a node", texts.contains("Core"))
+        assertFalse("Edge id is not a node", texts.contains("starts"))
+        assertFalse("Keyword `for` is not a node", texts.contains("for"))
+    }
+
+    fun testAgentflowFlowBlocks() {
+        val root = getStructureRoot(
+            "agentflow-beta TB\n" +
+            "    global\n" +
+            "        corpus[\"Shared corpus\"]@{ shape: refdoc }\n" +
+            "    end\n" +
+            "    flow writer[\"Drafting Agent\"]\n" +
+            "        draft[\"Draft\"]@{ shape: task }\n" +
+            "        draft -.- corpus\n" +
+            "    end"
+        )
+        val texts = collectPresentableTexts(root)
+        assertTrue("Should contain global block", texts.any { it.startsWith("global") })
+        assertTrue("Should contain flow block", texts.any { it.startsWith("flow") })
+        assertTrue("Should contain corpus", texts.contains("corpus"))
+        assertTrue("Should contain draft", texts.contains("draft"))
+        assertFalse("Shape name inside metadata is not a node", texts.contains("refdoc"))
+    }
+
     // ── Single-diagram optimization ─────────────────────────────────────
 
     fun testSingleDiagramSkipsDiagramNode() {

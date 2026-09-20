@@ -298,6 +298,133 @@ class MermaidCompletionContributorTest : BasePlatformTestCase() {
         assertTrue("Expected nested subgraph", completions.contains("subgraph"))
     }
 
+    // ── flowchart-elk (flowchart PSI, ELK layout) ──────────────────────
+
+    fun testFlowchartElkTypeDirectionAndKeywords() {
+        assertTrue("Expected flowchart-elk", completionsAt("<caret>").contains("flowchart-elk"))
+        val directions = completionsAt("flowchart-elk <caret>")
+        assertTrue("Expected LR after flowchart-elk", directions.contains("LR"))
+        assertTrue("Expected TD after flowchart-elk", directions.contains("TD"))
+        val keywords = completionsAt("flowchart-elk TD\n    <caret>")
+        assertTrue("Expected subgraph", keywords.contains("subgraph"))
+        assertTrue("Expected classDef", keywords.contains("classDef"))
+        assertFalse("Should not offer participant", keywords.contains("participant"))
+    }
+
+    // ── Mermaid 12: use case + agentflow ────────────────────────────────
+
+    fun testDiagramTypeCompletionIncludesMermaid12Types() {
+        val completions = completionsAt("<caret>")
+        assertTrue("Expected usecase-beta", completions.contains("usecase-beta"))
+        assertTrue("Expected agentflow-beta", completions.contains("agentflow-beta"))
+    }
+
+    fun testUsecaseKeywords() {
+        val completions = completionsAt("usecase-beta\n    <caret>")
+        assertTrue("Expected actor", completions.contains("actor"))
+        assertTrue("Expected systemBoundary", completions.contains("systemBoundary"))
+        assertTrue("Expected note", completions.contains("note"))
+        assertTrue("Expected json", completions.contains("json"))
+        assertFalse("Should not offer end outside a block", completions.contains("end"))
+        assertFalse("Should not offer subgraph", completions.contains("subgraph"))
+        assertFalse("Should not offer participant", completions.contains("participant"))
+    }
+
+    fun testEndInsideSystemBoundary() {
+        val completions = completionsAt("usecase-beta\n    systemBoundary Orders\n        <caret>\n    end")
+        assertTrue("Expected end inside systemBoundary", completions.contains("end"))
+    }
+
+    fun testAgentflowKeywords() {
+        val completions = completionsAt("agentflow-beta LR\n    <caret>")
+        assertTrue("Expected flow", completions.contains("flow"))
+        assertTrue("Expected global", completions.contains("global"))
+        assertTrue("Expected connector", completions.contains("connector"))
+        assertFalse("Should not offer subgraph", completions.contains("subgraph"))
+        assertFalse("Should not offer actor", completions.contains("actor"))
+    }
+
+    fun testAgentflowDirectionOnHeaderLine() {
+        val completions = completionsAt("agentflow-beta <caret>")
+        assertTrue("Expected LR", completions.contains("LR"))
+        assertTrue("Expected TB", completions.contains("TB"))
+    }
+
+    fun testUsecaseDirectionAfterKeyword() {
+        val completions = completionsAt("usecase-beta\n    direction <caret>")
+        assertTrue("Expected LR", completions.contains("LR"))
+    }
+
+    fun testUsecaseNoDirectionOnHeaderLine() {
+        val completions = completionsAt("usecase-beta <caret>")
+        assertFalse("usecase-beta takes no header direction", completions.contains("LR"))
+    }
+
+    fun testUsecaseArrowsAfterIdentifier() {
+        val completions = completionsAt("usecase-beta\n    actor A\n    A <caret>")
+        assertTrue("Expected -->", completions.contains("-->"))
+        assertTrue("Expected --|>", completions.contains("--|>"))
+        assertTrue("Expected ..>", completions.contains("..>"))
+        assertFalse("Should not offer ->>", completions.contains("->>"))
+    }
+
+    // ── Directive content completion (%%{init: {...}}%%) ───────────────
+
+    fun testDirectiveThemeValues() {
+        val completions = completionsAt("%%{init: {'theme': '<caret>'}}%%")
+        assertTrue("Expected dark", completions.contains("dark"))
+        assertTrue("Expected redux-color", completions.contains("redux-color"))
+        assertFalse("Should not offer config keys as a theme value", completions.contains("look"))
+        assertFalse("Should not offer diagram types inside a directive", completions.contains("flowchart"))
+    }
+
+    fun testDirectiveLayoutValues() {
+        val completions = completionsAt("%%{init: {'layout': '<caret>'}}%%")
+        assertTrue("Expected dagre", completions.contains("dagre"))
+        assertTrue("Expected elk", completions.contains("elk"))
+        assertTrue("Expected elk.box", completions.contains("elk.box"))
+        assertFalse("Should not offer theme values for layout", completions.contains("dark"))
+    }
+
+    fun testDirectiveConfigKeys() {
+        val completions = completionsAt("%%{init: {<caret>}}%%")
+        assertTrue("Expected theme key", completions.contains("theme"))
+        assertTrue("Expected look key", completions.contains("look"))
+        assertTrue("Expected layout key", completions.contains("layout"))
+        assertFalse("Should not offer values without a key", completions.contains("dark"))
+    }
+
+    fun testDirectiveValuesForSecondKey() {
+        val completions = completionsAt("%%{init: {'theme': 'dark', 'look': '<caret>'}}%%")
+        assertTrue("Expected handDrawn", completions.contains("handDrawn"))
+        assertTrue("Expected neo", completions.contains("neo"))
+        assertFalse("Should not offer theme values for look", completions.contains("forest"))
+    }
+
+    fun testDirectiveValuesAfterClosedNestedObject() {
+        // The text before the caret spans several DIRECTIVE tokens (chunks split on `}`)
+        val completions = completionsAt("%%{init: {'themeVariables': {'lineColor': '#f00'}, 'layout': '<caret>'}}%%")
+        assertTrue("Expected dagre after a nested object", completions.contains("dagre"))
+    }
+
+    fun testDirectiveInsideDiagramBody() {
+        val completions = completionsAt("flowchart LR\n    A --> B\n    %%{init: {'theme': '<caret>'}}%%")
+        assertTrue("Expected dark inside a body directive", completions.contains("dark"))
+        assertFalse("Should not offer flowchart keywords inside a directive", completions.contains("subgraph"))
+    }
+
+    fun testDirectivePrefixFiltersValues() {
+        myFixture.configureByText("test.mmd", "%%{init: {'theme': 'redux-d<caret>'}}%%")
+        val items = myFixture.completeBasic()?.map { it.lookupString }
+        assertNotNull("Two themes match the prefix redux-d", items)
+        assertEquals(setOf("redux-dark", "redux-dark-color"), items!!.toSet())
+    }
+
+    fun testNonInitDirectiveOffersNothing() {
+        val completions = completionsAt("%%{wrap<caret>}%%")
+        assertFalse("wrap directive has no config keys", completions.contains("theme"))
+    }
+
     // ── Arrow completion ───────────────────────────────────────────────
 
     fun testArrowsInFlowchartAfterIdentifier() {

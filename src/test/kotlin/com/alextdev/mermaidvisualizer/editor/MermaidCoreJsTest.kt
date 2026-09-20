@@ -81,6 +81,12 @@ class MermaidCoreJsTest {
     }
 
     @Test
+    fun `core js initMermaid passes the layout engine only when configured`() {
+        assertTrue(jsContent.contains("if (cfg.layout) opts.layout = cfg.layout;"),
+            "initMermaid should forward cfg.layout to mermaid.initialize and leave Mermaid's default otherwise")
+    }
+
+    @Test
     fun `core js initMermaid applies custom line color via themeVariables`() {
         assertTrue(jsContent.contains("cfg.lineColor"), "initMermaid should read cfg.lineColor")
         assertTrue(jsContent.contains("themeVariables"), "Custom line color should be applied via themeVariables")

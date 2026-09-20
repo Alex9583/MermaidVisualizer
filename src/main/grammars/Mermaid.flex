@@ -66,6 +66,10 @@ import static com.intellij.psi.TokenType.*;
         "performanceRequirement", "designConstraint",
         "verifymethod", "docRef",
         "satisfies", "traces", "derives", "refines", "verifies", "copies",
+        // Use case (usecase-beta)
+        "systemBoundary", "for", "json", "include", "extend",
+        // Agentflow (agentflow-beta)
+        "flow", "connector", "global",
         // C4
         "Person", "Person_Ext", "System", "System_Ext", "SystemDb", "SystemQueue",
         "Container", "Container_Ext", "ContainerDb", "ContainerQueue",
@@ -125,8 +129,10 @@ TEXT      = {TEXT_UNIT}* {WORD_CHAR} {TEXT_UNIT}* ("-" {TEXT_CHAR} {TEXT_UNIT}*)
     "end"                           { yybegin(NORMAL); return END_KW; }
 
     "flowchart"
+    | "flowchart-elk"
     | "graph"
-    | "swimlane-beta"               { yybegin(AFTER_FLOWCHART); return DIAGRAM_TYPE; }
+    | "swimlane-beta"
+    | "agentflow-beta"              { yybegin(AFTER_FLOWCHART); return DIAGRAM_TYPE; }
 
     "sequenceDiagram"
     | "classDiagram"
@@ -164,7 +170,8 @@ TEXT      = {TEXT_UNIT}* {WORD_CHAR} {TEXT_UNIT}* ("-" {TEXT_CHAR} {TEXT_UNIT}*)
     | "railroad-beta"
     | "railroad-ebnf-beta"
     | "railroad-abnf-beta"
-    | "railroad-peg-beta"          { yybegin(NORMAL); return DIAGRAM_TYPE; }
+    | "railroad-peg-beta"
+    | "usecase-beta"                { yybegin(NORMAL); return DIAGRAM_TYPE; }
 
     "---"                           { yybegin(FRONTMATTER); return DIRECTIVE; }
 
@@ -285,6 +292,10 @@ TEXT      = {TEXT_UNIT}* {WORD_CHAR} {TEXT_UNIT}* ("-" {TEXT_CHAR} {TEXT_UNIT}*)
     // ZenUML stereotypes (`@Actor`, `@Boundary`, `@Starter(...)`) are one symbol, never a node ref.
     // A bare `@` (`A@{ shape: ... }`, edge ids `e1@-->`) falls through to the SYMBOL fallback below.
     "@" [a-zA-Z_] {ID_CHAR}*        { return SYMBOL; }
+
+    // UML stereotypes (`<<interface>>` in class diagrams, `<<Employee>>` in use case diagrams) are one
+    // symbol, never a node ref. A letter must follow `<<` so the sequence arrow `<<->>` is unaffected.
+    "<<" [a-zA-Z_] [^>\r\n]* ">>"   { return SYMBOL; }
 
     {NUMBER}                        { return NUMBER; }
 

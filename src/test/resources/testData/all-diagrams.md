@@ -1,6 +1,6 @@
 # All Mermaid Diagram Types
 
-Test file covering all 32+ Mermaid diagram types for manual and automated verification.
+Test file covering all 34+ Mermaid diagram types for manual and automated verification.
 
 ## 1. Flowchart
 
@@ -30,6 +30,19 @@ flowchart LR
     end
     S --> L1
     legacy@{ view: collapsed }
+```
+
+ELK layout selected by the `flowchart-elk` header (same as `layout: elk` in the front matter):
+
+```mermaid
+flowchart-elk TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[OK]
+    B -->|No| D[Cancel]
+    subgraph wrap [Wrap-up]
+        C --> E[End]
+        D --> E
+    end
 ```
 
 ## 2. Graph (flowchart alias)
@@ -531,6 +544,82 @@ swimlane-beta LR
   end
 
   lead --> quote --> review --> approve
+```
+
+## 33. Use Case Diagram (beta)
+
+```mermaid
+usecase-beta
+direction LR
+accTitle: Online ordering use cases
+actor Customer("Customer")
+actor Staff("Order staff")@{ type: hollow, business: true } <<Employee>>
+actor Admin@{ type: awesome }
+systemBoundary ordering["Ordering System"]@{ type: package }:::system
+  Browse("Browse products")
+  Checkout("Checkout") <<Core>>:::critical
+  Payment("Process payment")
+  ApplyCoupon("Apply coupon")
+  Review[Review order]
+end
+json OrderData@{
+  "status": "pending",
+  "items": [{ "name": "Book", "quantity": 1 }],
+  "total": 29.95
+}:::data
+note for Checkout "`Validates the **cart** before payment`"
+Customer starts@-- "places order" ---> Checkout
+Customer --> Browse
+Checkout pays@..> : include Payment
+ApplyCoupon ..> : extend Checkout
+Admin --|> Staff
+Staff --> Review
+Review --> OrderData
+classDef system stroke:#c8a02a,stroke-width:2px
+classDef critical stroke:#c33,stroke-width:3px
+classDef data stroke:#3572a5
+starts@{ animation: fast }
+style pays stroke:#6b46c1,stroke-width:2px
+```
+
+## 34. Agentflow (beta)
+
+```mermaid
+agentflow-beta TB
+  connector llm["LLM API"]
+  llm@{ protocol: "http", endpoint: "https://api.example.com/chat" }
+
+  global
+    corpus["Shared corpus"]@{ shape: refdoc }
+  end
+
+  flow coffee_team["Coffee Team"]
+    city["city"]@{ shape: input, value: "Stockholm" }
+
+    flow researcher["Researcher"]
+      research["research_location"]@{ shape: tool, params: "city :: String", returns: "Report" }
+      write["write_copy"]@{ shape: tool, connectorRef: "llm.chat", returns: "CoffeeCopy" }
+      city --> research --> write
+      research -.- corpus
+    end
+    researcher@{ instruction: "Research the city and draft English coffee copy citing sources." }
+
+    flow designer["Designer"]
+      render["generate_html"]@{ shape: tool, connectorRef: "llm.chat", returns: "String" }
+      brand["Nordic Brand Guide"]@{ shape: refdoc }
+      render -.- brand
+    end
+
+    researcher --> designer
+  end
+
+  check["Tests pass?"]@{ shape: decision }
+  ship["Ship it"]@{ shape: action }
+  fix["Fix the build"]@{ shape: task }
+  designer --> check
+  check -- yes --> ship
+  check -- no --> fix
+  fix --x check
 ```
 
 ---

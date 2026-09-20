@@ -39,6 +39,7 @@ internal class MermaidSettings : PersistentStateComponent<MermaidSettings.State>
     data class State(
         var theme: MermaidTheme = MermaidTheme.AUTO,
         var look: MermaidLook = MermaidLook.CLASSIC,
+        var layout: MermaidLayout = MermaidLayout.DEFAULT,
         var fontFamily: MermaidFontFamily = MermaidFontFamily.DEFAULT,
         var maxTextSize: Int = DEFAULT_MAX_TEXT_SIZE,
         var debounceMs: Long = DEFAULT_DEBOUNCE_MS,
@@ -82,7 +83,14 @@ internal class MermaidSettings : PersistentStateComponent<MermaidSettings.State>
         }
         append("\"look\":\"")
         append(jsonEscape(myState.look.jsValue))
-        append("\",\"maxTextSize\":")
+        append('"')
+        val layout = myState.layout
+        if (layout.jsValue != null) {
+            append(",\"layout\":\"")
+            append(jsonEscape(layout.jsValue))
+            append('"')
+        }
+        append(",\"maxTextSize\":")
         append(myState.maxTextSize)
         append(",\"maxHeightPercent\":")
         append(myState.maxHeightPercent)
@@ -112,6 +120,23 @@ enum class MermaidTheme(val jsValue: String?, val displayKey: String) {
     DARK("dark", "settings.mermaid.theme.dark"),
     FOREST("forest", "settings.mermaid.theme.forest"),
     NEUTRAL("neutral", "settings.mermaid.theme.neutral"),
+    NEO("neo", "settings.mermaid.theme.neo"),
+    NEO_DARK("neo-dark", "settings.mermaid.theme.neoDark"),
+    REDUX("redux", "settings.mermaid.theme.redux"),
+    REDUX_DARK("redux-dark", "settings.mermaid.theme.reduxDark"),
+    REDUX_COLOR("redux-color", "settings.mermaid.theme.reduxColor"),
+    REDUX_DARK_COLOR("redux-dark-color", "settings.mermaid.theme.reduxDarkColor"),
+}
+
+/**
+ * Layout engine passed to `mermaid.initialize({ layout })`. [DEFAULT] sends nothing, so Mermaid's own
+ * default applies (ELK since Mermaid 12; mindmap keeps cose-bilkent, swimlane keeps its lane layout).
+ * A `layout` set in a diagram's front matter always wins over this setting.
+ */
+enum class MermaidLayout(val jsValue: String?, val displayKey: String) {
+    DEFAULT(null, "settings.mermaid.layout.default"),
+    DAGRE("dagre", "settings.mermaid.layout.dagre"),
+    ELK("elk", "settings.mermaid.layout.elk"),
 }
 
 enum class MermaidLook(val jsValue: String, val displayKey: String) {

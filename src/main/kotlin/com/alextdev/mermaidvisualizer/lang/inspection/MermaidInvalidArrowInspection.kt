@@ -104,6 +104,16 @@ private fun isTrailingDots(arrow: PsiElement): Boolean {
  */
 private val FLOWCHART_LINK_FRAGMENTS = setOf("--", "---", "==", "===", "-.", "-.-", ".->")
 
+/**
+ * Diagram kinds using the flowchart link grammar: variable-length arrows (`---->`), `-- text -->`
+ * fragments and markerless links. Use case (`Customer -- "places order" ---> Checkout`) and
+ * agentflow (`check -- yes --> ship`) share it since Mermaid 12.
+ */
+private val FLOWCHART_LINK_KINDS = setOf(
+    MermaidDiagramKind.FLOWCHART, MermaidDiagramKind.GRAPH, MermaidDiagramKind.SWIMLANE,
+    MermaidDiagramKind.USECASE, MermaidDiagramKind.AGENTFLOW,
+)
+
 private fun isArrowValidForKind(
     arrowText: String,
     kind: MermaidDiagramKind,
@@ -118,10 +128,8 @@ private fun isArrowValidForKind(
         if (arrowText.dropLast(1) in validArrows) return true
     }
 
-    // Handle variable-length arrows in flowchart/graph/swimlane (e.g., ----> normalizes to --->)
-    if (kind == MermaidDiagramKind.FLOWCHART || kind == MermaidDiagramKind.GRAPH ||
-        kind == MermaidDiagramKind.SWIMLANE
-    ) {
+    // Handle variable-length arrows and link fragments in the flowchart family (e.g., ----> normalizes to --->)
+    if (kind in FLOWCHART_LINK_KINDS) {
         val normalized = arrowText
             .replace(Regex("-{3,}"), "---")
             .replace(Regex("={3,}"), "===")
