@@ -14,8 +14,8 @@
             <li>Open in new tab — pop any diagram into its own full-size preview tab</li>
             <li>Export diagrams as SVG or PNG — copy to clipboard or save to file</li>
             <li>Automatic dark/light theme matching with your IDE</li>
-            <li>All 32+ Mermaid diagram types — fully offline with bundled Mermaid.js (v11.17.2)</li>
-            <li>ELK layout support — <code>layout: elk</code> and its options (e.g. <code>mergeEdges</code>) in the YAML frontmatter work out of the box</li>
+            <li>All 34+ Mermaid diagram types (including the new use case and agentflow diagrams) — fully offline with bundled Mermaid.js (v12.0.0)</li>
+            <li>ELK and dagre layouts — ELK is bundled and Mermaid 12's default; <code>layout: dagre</code> / <code>layout: elk</code> (with <code>elk.*</code> options) work per diagram in the YAML frontmatter, as does the <code>flowchart-elk</code> header keyword, or globally from the settings</li>
         </ul>
 
         <h2>Code Intelligence</h2>
@@ -32,7 +32,7 @@
         </ul>
 
         <h2>Settings</h2>
-        <p>Configurable via <code>Settings &gt; Tools &gt; Mermaid</code> — theme, look (classic/hand-drawn), font family, max text size, live reload delay, max preview height.</p>
+        <p>Configurable via <code>Settings &gt; Tools &gt; Mermaid</code> — theme (incl. the Mermaid 12 redux/neo themes), look (classic/hand-drawn/neo), layout engine (ELK/dagre), font family, max text size, live reload delay, max preview height.</p>
         <p>Custom rendering colors — optionally override the visualizer background color and the line/edge color (disabled by default, so the rendering keeps following your IDE theme unless you opt in).</p>
         <p>Customizable syntax colors via <code>Settings &gt; Editor &gt; Color Scheme &gt; Mermaid</code>.</p>
 

@@ -290,14 +290,13 @@ internal class MermaidPreviewPanel(
 
         private fun buildHtml(): String {
             val mermaidJs = loadResource("web/mermaid.min.js")
-            val elkJs = loadResource("web/mermaid-elk.js")
             val zoomJs = loadResource("web/mermaid-zoom.js")
             val coreJs = loadResource("web/mermaid-core.js")
             val standaloneJs = loadResource("web/mermaid-standalone.js")
             val standaloneCss = loadResource("web/mermaid-standalone.css")
             val shadowCss = loadResource("web/mermaid-shadow.css")
 
-            return buildString(mermaidJs.length + elkJs.length + zoomJs.length + coreJs.length + standaloneJs.length + standaloneCss.length + shadowCss.length + 512) {
+            return buildString(mermaidJs.length + zoomJs.length + coreJs.length + standaloneJs.length + standaloneCss.length + shadowCss.length + 512) {
                 append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\">")
                 append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">")
                 append("<style>")
@@ -310,9 +309,6 @@ internal class MermaidPreviewPanel(
                 append("<div id=\"mermaid-container\"></div>")
                 append("<script>")
                 append(mermaidJs)
-                append("</script>")
-                append("<script>")
-                append(elkJs)
                 append("</script>")
                 append("<script>")
                 append(coreJs)

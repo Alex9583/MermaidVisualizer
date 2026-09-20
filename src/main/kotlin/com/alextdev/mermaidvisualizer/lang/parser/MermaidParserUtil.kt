@@ -13,6 +13,9 @@ import com.intellij.psi.TokenType
  * per diagram type. CLASS, STATE and CONTENT have no `end`-terminated blocks
  * (namespaces and composite states use braces, content diagrams use indentation).
  * ER shares the flowchart `subgraph` block (supported since Mermaid 11.17).
+ * Generic diagrams with their own `end`-terminated blocks get a dedicated context from
+ * [consumeGenericType] without a dedicated PSI class: `block-beta` (`block`), `usecase-beta`
+ * (`systemBoundary`) and `agentflow-beta` (`flow`, `global`).
  * GENERIC is a superset used only for null context (error recovery outside any diagram).
  */
 @Suppress("unused")
@@ -20,7 +23,7 @@ object MermaidParserUtil : GeneratedParserUtilBase() {
 
     private val DIAGRAM_CONTEXT_KEY = Key.create<DiagramContext>("MERMAID_DIAGRAM_CONTEXT")
 
-    private val FLOWCHART_TYPES = setOf("flowchart", "graph", "swimlane-beta")
+    private val FLOWCHART_TYPES = setOf("flowchart", "flowchart-elk", "graph", "swimlane-beta")
     private val STATE_TYPES = setOf("stateDiagram-v2", "stateDiagram")
 
     private val FLOWCHART_BLOCK_KEYWORDS = setOf("subgraph")
@@ -28,13 +31,23 @@ object MermaidParserUtil : GeneratedParserUtilBase() {
         "loop", "alt", "opt", "par", "critical", "break", "rect", "box"
     )
     private val BLOCK_BETA_BLOCK_KEYWORDS = setOf("block")
+    private val USECASE_BLOCK_KEYWORDS = setOf("systemBoundary")
+    private val AGENTFLOW_BLOCK_KEYWORDS = setOf("flow", "global")
     private val GENERIC_BLOCK_KEYWORDS =
-        FLOWCHART_BLOCK_KEYWORDS + SEQUENCE_BLOCK_KEYWORDS + BLOCK_BETA_BLOCK_KEYWORDS
+        FLOWCHART_BLOCK_KEYWORDS + SEQUENCE_BLOCK_KEYWORDS + BLOCK_BETA_BLOCK_KEYWORDS +
+            USECASE_BLOCK_KEYWORDS + AGENTFLOW_BLOCK_KEYWORDS
+
+    /** Generic diagram types that own `end`-terminated blocks, keyed by their DIAGRAM_TYPE text. */
+    private val GENERIC_CONTEXTS = mapOf(
+        "block-beta" to DiagramContext.BLOCK_BETA,
+        "usecase-beta" to DiagramContext.USECASE,
+        "agentflow-beta" to DiagramContext.AGENTFLOW,
+    )
 
     private val SEQUENCE_DIVIDERS = setOf("else", "and")
 
     private enum class DiagramContext {
-        FLOWCHART, SEQUENCE, CLASS, ER, STATE, BLOCK_BETA, CONTENT, GENERIC
+        FLOWCHART, SEQUENCE, CLASS, ER, STATE, BLOCK_BETA, USECASE, AGENTFLOW, CONTENT, GENERIC
     }
 
     private fun blockKeywordsFor(context: DiagramContext?): Set<String> {
@@ -43,6 +56,8 @@ object MermaidParserUtil : GeneratedParserUtilBase() {
             DiagramContext.ER -> FLOWCHART_BLOCK_KEYWORDS
             DiagramContext.SEQUENCE -> SEQUENCE_BLOCK_KEYWORDS
             DiagramContext.BLOCK_BETA -> BLOCK_BETA_BLOCK_KEYWORDS
+            DiagramContext.USECASE -> USECASE_BLOCK_KEYWORDS
+            DiagramContext.AGENTFLOW -> AGENTFLOW_BLOCK_KEYWORDS
             DiagramContext.CLASS,
             DiagramContext.STATE,
             DiagramContext.CONTENT -> emptySet()
@@ -115,7 +130,7 @@ object MermaidParserUtil : GeneratedParserUtilBase() {
     fun consumeGenericType(builder: PsiBuilder, level: Int): Boolean {
         if (builder.tokenType !== MermaidTokenTypes.DIAGRAM_TYPE) return false
         val text = builder.tokenText ?: return false
-        val context = if (text == "block-beta") DiagramContext.BLOCK_BETA else DiagramContext.CONTENT
+        val context = GENERIC_CONTEXTS[text] ?: DiagramContext.CONTENT
         builder.putUserData(DIAGRAM_CONTEXT_KEY, context)
         builder.advanceLexer()
         return true

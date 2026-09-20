@@ -58,7 +58,7 @@ class MermaidIntegrationTest : BasePlatformTestCase() {
         val extension = MermaidBrowserExtension()
         try {
             val scripts = extension.scripts
-            assertEquals("Should have exactly 7 scripts", 7, scripts.size)
+            assertEquals("Should have exactly 6 scripts", 6, scripts.size)
 
             val names = scripts.map { it.substringAfterLast('/') }
 
@@ -68,34 +68,29 @@ class MermaidIntegrationTest : BasePlatformTestCase() {
                 names[0]
             )
             assertEquals(
-                "mermaid-elk.js must be loaded second (registers ELK layouts on the mermaid global)",
-                "mermaid-elk.js",
+                "mermaid-shadow-css-init.js must be loaded second (shadow CSS before render)",
+                "mermaid-shadow-css-init.js",
                 names[1]
             )
             assertEquals(
-                "mermaid-shadow-css-init.js must be loaded third (shadow CSS before render)",
-                "mermaid-shadow-css-init.js",
+                "mermaid-config-init.js must be loaded third (config before render)",
+                "mermaid-config-init.js",
                 names[2]
             )
             assertEquals(
-                "mermaid-config-init.js must be loaded fourth (config before render)",
-                "mermaid-config-init.js",
+                "mermaid-core.js must be loaded fourth (shared module before zoom and render)",
+                "mermaid-core.js",
                 names[3]
             )
             assertEquals(
-                "mermaid-core.js must be loaded fifth (shared module before zoom and render)",
-                "mermaid-core.js",
+                "mermaid-zoom.js must be loaded fifth (zoom module before render)",
+                "mermaid-zoom.js",
                 names[4]
             )
             assertEquals(
-                "mermaid-zoom.js must be loaded sixth (zoom module before render)",
-                "mermaid-zoom.js",
-                names[5]
-            )
-            assertEquals(
-                "mermaid-render.js must be loaded seventh (bootstrap after library, CSS, config, core, and zoom)",
+                "mermaid-render.js must be loaded sixth (bootstrap after library, CSS, config, core, and zoom)",
                 "mermaid-render.js",
-                names[6]
+                names[5]
             )
         } finally {
             extension.dispose()

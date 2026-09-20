@@ -7,12 +7,23 @@ import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.PrioritizedLookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.psi.PsiElement
 import com.intellij.psi.util.elementType
 import com.intellij.util.ProcessingContext
 
+/** Identifier-like run right before the caret: config keys and values such as `redux-dark-color`, `elk.box`, `handDrawn`. */
+private val DIRECTIVE_PREFIX = Regex("""[A-Za-z0-9_.\-]*$""")
+
+/** `'key': 'va` / `key: va` right before the caret — the config key whose value is being typed. */
+private val KEY_BEFORE_CARET = Regex("""["']?([A-Za-z]+)["']?\s*:\s*["']?[A-Za-z0-9_.\-]*$""")
+
 /**
  * Provides directive and configuration completion for `%%{init: {...}}%%` blocks.
- * Heuristic parsing of the DIRECTIVE token content to determine position.
+ *
+ * A directive is lexed as several consecutive DIRECTIVE tokens (`%%{`, text chunks split on `}`, `}%%`).
+ * The platform's default completion prefix for such a token is the whole chunk up to the caret
+ * (`init: {'theme': '`), which no lookup item can match, so the prefix is recomputed from the
+ * identifier-like run before the caret and the current key is detected from the text before it.
  */
 class MermaidDirectiveProvider : CompletionProvider<CompletionParameters>() {
 
@@ -21,18 +32,32 @@ class MermaidDirectiveProvider : CompletionProvider<CompletionParameters>() {
         context: ProcessingContext,
         result: CompletionResultSet,
     ) {
-        val position = parameters.position
-        if (MermaidCompletionData.isInsideDiagramBody(position)) return
-
-        // Check if we're adjacent to or inside a DIRECTIVE token
         val leaf = parameters.originalPosition ?: return
+
         if (leaf.elementType == MermaidTokenTypes.DIRECTIVE) {
-            addDirectiveContentCompletions(leaf.text, result)
+            val textBeforeCaret = directiveTextBeforeCaret(leaf, parameters.offset)
+            val prefix = DIRECTIVE_PREFIX.find(textBeforeCaret)?.value ?: ""
+            addDirectiveContentCompletions(textBeforeCaret, result.withPrefixMatcher(prefix))
             return
         }
 
-        // At file level, offer the init directive template
+        // At file level (outside any diagram body), offer the init directive template
+        if (MermaidCompletionData.isInsideDiagramBody(parameters.position)) return
         addDirectiveTemplate(result)
+    }
+
+    /** Text of the directive from its `%%{` opener up to the caret, joined across the DIRECTIVE tokens. */
+    private fun directiveTextBeforeCaret(leaf: PsiElement, caretOffset: Int): String {
+        val inLeaf = (caretOffset - leaf.textRange.startOffset).coerceIn(0, leaf.textLength)
+        val parts = ArrayDeque<String>()
+        parts.addFirst(leaf.text.substring(0, inLeaf))
+        var current: PsiElement? = if (leaf.text.startsWith("%%{")) null else leaf.prevSibling
+        while (current != null && current.elementType == MermaidTokenTypes.DIRECTIVE) {
+            parts.addFirst(current.text)
+            if (current.text.startsWith("%%{")) break
+            current = current.prevSibling
+        }
+        return parts.joinToString("")
     }
 
     private fun addDirectiveTemplate(result: CompletionResultSet) {
@@ -42,35 +67,29 @@ class MermaidDirectiveProvider : CompletionProvider<CompletionParameters>() {
         result.addElement(PrioritizedLookupElement.withPriority(element, 50.0))
     }
 
-    private fun addDirectiveContentCompletions(directiveText: String, result: CompletionResultSet) {
-        val configTypeText = MyMessageBundle.message("completion.mermaid.config")
+    private fun addDirectiveContentCompletions(textBeforeCaret: String, result: CompletionResultSet) {
+        // Only inside the init config object: `%%{init: {` ... — other directives (`%%{wrap}%%`) get nothing.
+        val afterInit = textBeforeCaret.substringAfter("init", missingDelimiterValue = "")
+        if ("{" !in afterInit) return
 
-        // Detect if we're inside the init config object
-        if ("init" in directiveText && "{" in directiveText.substringAfter("init")) {
-            // Offer config keys
-            for (key in MermaidCompletionData.DIRECTIVE_CONFIG_KEYS) {
-                val element = LookupElementBuilder.create(key)
-                    .withTypeText(configTypeText)
-                result.addElement(PrioritizedLookupElement.withPriority(element, 50.0))
-            }
+        when (KEY_BEFORE_CARET.find(textBeforeCaret)?.groupValues?.get(1)) {
+            "theme" -> addValues(MermaidCompletionData.DIRECTIVE_THEME_VALUES, "completion.mermaid.config.theme", result)
+            "look" -> addValues(MermaidCompletionData.DIRECTIVE_LOOK_VALUES, "completion.mermaid.config.look", result)
+            "layout" -> addValues(MermaidCompletionData.DIRECTIVE_LAYOUT_VALUES, "completion.mermaid.config.layout", result)
+            else -> addValues(MermaidCompletionData.DIRECTIVE_CONFIG_KEYS, "completion.mermaid.config", result, priority = 50.0)
+        }
+    }
 
-            if ("theme" in directiveText) {
-                val themeTypeText = MyMessageBundle.message("completion.mermaid.config.theme")
-                for (value in MermaidCompletionData.DIRECTIVE_THEME_VALUES) {
-                    val element = LookupElementBuilder.create(value)
-                        .withTypeText(themeTypeText)
-                    result.addElement(PrioritizedLookupElement.withPriority(element, 52.0))
-                }
-            }
-
-            if ("look" in directiveText) {
-                val lookTypeText = MyMessageBundle.message("completion.mermaid.config.look")
-                for (value in MermaidCompletionData.DIRECTIVE_LOOK_VALUES) {
-                    val element = LookupElementBuilder.create(value)
-                        .withTypeText(lookTypeText)
-                    result.addElement(PrioritizedLookupElement.withPriority(element, 52.0))
-                }
-            }
+    private fun addValues(
+        values: List<String>,
+        typeTextKey: String,
+        result: CompletionResultSet,
+        priority: Double = 52.0,
+    ) {
+        val typeText = MyMessageBundle.message(typeTextKey)
+        for (value in values) {
+            val element = LookupElementBuilder.create(value).withTypeText(typeText)
+            result.addElement(PrioritizedLookupElement.withPriority(element, priority))
         }
     }
 }

@@ -1,5 +1,8 @@
 package com.alextdev.mermaidvisualizer.lang.completion
 
+import com.alextdev.mermaidvisualizer.settings.MermaidLayout
+import com.alextdev.mermaidvisualizer.settings.MermaidLook
+import com.alextdev.mermaidvisualizer.settings.MermaidTheme
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -22,7 +25,7 @@ class MermaidCompletionDataTest {
             "wardley-beta", "treeView-beta", "treemap-beta",
             "eventmodeling", "radar-beta", "cynefin-beta",
             "railroad-beta", "railroad-ebnf-beta", "railroad-abnf-beta",
-            "railroad-peg-beta", "swimlane-beta",
+            "railroad-peg-beta", "swimlane-beta", "usecase-beta", "agentflow-beta", "flowchart-elk",
         )
         val actual = MermaidDiagramKind.entries.map { it.keyword }.toSet()
         assertEquals(expectedKeywords, actual)
@@ -66,6 +69,7 @@ class MermaidCompletionDataTest {
             MermaidDiagramKind.SEQUENCE, MermaidDiagramKind.CLASS,
             MermaidDiagramKind.ER, MermaidDiagramKind.STATE, MermaidDiagramKind.STATE_V1,
             MermaidDiagramKind.CYNEFIN, MermaidDiagramKind.SWIMLANE,
+            MermaidDiagramKind.USECASE, MermaidDiagramKind.AGENTFLOW, MermaidDiagramKind.FLOWCHART_ELK,
         )
         for (kind in typesWithArrows) {
             val arrows = MermaidCompletionData.arrowsFor(kind)
@@ -100,17 +104,69 @@ class MermaidCompletionDataTest {
         assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.CYNEFIN).isEmpty())
         assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.RAILROAD).isEmpty())
         assertTrue(MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.WARDLEY).isEmpty())
+        assertEquals(setOf("systemBoundary"), MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.USECASE))
+        assertEquals(setOf("flow", "global"), MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.AGENTFLOW))
+    }
+
+    @Test
+    fun testFlowchartElkSharesFlowchartCatalogs() {
+        assertEquals(
+            MermaidCompletionData.keywordsFor(MermaidDiagramKind.FLOWCHART),
+            MermaidCompletionData.keywordsFor(MermaidDiagramKind.FLOWCHART_ELK),
+        )
+        assertEquals(
+            MermaidCompletionData.arrowsFor(MermaidDiagramKind.FLOWCHART),
+            MermaidCompletionData.arrowsFor(MermaidDiagramKind.FLOWCHART_ELK),
+        )
+        assertEquals(setOf("subgraph"), MermaidCompletionData.blockKeywordsFor(MermaidDiagramKind.FLOWCHART_ELK))
+        assertTrue(MermaidCompletionData.dividerKeywordsFor(MermaidDiagramKind.FLOWCHART_ELK).isEmpty())
+    }
+
+    // ── Mermaid 12: use case + agentflow ────────────────────────────────
+
+    @Test
+    fun testUsecaseKeywordsContainExpected() {
+        val keywords = MermaidCompletionData.keywordsFor(MermaidDiagramKind.USECASE)
+        assertTrue(keywords.containsAll(setOf("actor", "systemBoundary", "end", "direction", "note", "for", "json", "include", "extend")))
+        assertFalse(keywords.contains("subgraph"))
+        assertFalse(keywords.contains("participant"))
+    }
+
+    @Test
+    fun testAgentflowKeywordsContainExpected() {
+        val keywords = MermaidCompletionData.keywordsFor(MermaidDiagramKind.AGENTFLOW)
+        assertTrue(keywords.containsAll(setOf("flow", "global", "connector", "end", "direction", "classDef", "click")))
+        assertFalse(keywords.contains("subgraph"))
+        assertFalse(keywords.contains("actor"))
+    }
+
+    @Test
+    fun testUsecaseAndAgentflowArrowsContainExpected() {
+        val usecase = MermaidCompletionData.arrowsFor(MermaidDiagramKind.USECASE).map { it.arrow }.toSet()
+        assertTrue(usecase.containsAll(setOf("-->", "--|>", "..>", "<--", "--o", "--x")))
+        val agentflow = MermaidCompletionData.arrowsFor(MermaidDiagramKind.AGENTFLOW).map { it.arrow }.toSet()
+        assertTrue(agentflow.containsAll(setOf("-->", "--x", "-.-")))
+        assertFalse(agentflow.contains("==>"))
     }
 
     @Test
     fun testDirectiveValuesMatchSettings() {
         // Themes should match MermaidTheme enum js values (excluding AUTO which has null)
-        val expectedThemes = setOf("default", "dark", "forest", "neutral")
+        val expectedThemes = MermaidTheme.entries.mapNotNull { it.jsValue }.toSet()
+        assertTrue(expectedThemes.containsAll(setOf("default", "dark", "forest", "neutral", "redux-color", "neo-dark")))
         assertEquals(expectedThemes, MermaidCompletionData.DIRECTIVE_THEME_VALUES.toSet())
 
         // Looks should match MermaidLook enum js values
-        val expectedLooks = setOf("classic", "handDrawn", "neo")
+        val expectedLooks = MermaidLook.entries.map { it.jsValue }.toSet()
+        assertEquals(setOf("classic", "handDrawn", "neo"), expectedLooks)
         assertEquals(expectedLooks, MermaidCompletionData.DIRECTIVE_LOOK_VALUES.toSet())
+
+        // Every selectable layout engine must be offered in directives (directives also list ELK variants)
+        val settingsLayouts = MermaidLayout.entries.mapNotNull { it.jsValue }.toSet()
+        assertEquals(setOf("dagre", "elk"), settingsLayouts)
+        assertTrue(MermaidCompletionData.DIRECTIVE_LAYOUT_VALUES.containsAll(settingsLayouts))
+        assertTrue(MermaidCompletionData.DIRECTIVE_LAYOUT_VALUES.contains("elk.box"))
+        assertTrue(MermaidCompletionData.DIRECTIVE_CONFIG_KEYS.contains("layout"))
     }
 
     @Test

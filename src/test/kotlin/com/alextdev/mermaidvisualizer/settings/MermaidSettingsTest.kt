@@ -21,6 +21,7 @@ class MermaidSettingsTest {
         val state = settings.state
         assertEquals(MermaidTheme.AUTO, state.theme)
         assertEquals(MermaidLook.CLASSIC, state.look)
+        assertEquals(MermaidLayout.DEFAULT, state.layout)
         assertEquals(MermaidFontFamily.DEFAULT, state.fontFamily)
         assertEquals(DEFAULT_MAX_TEXT_SIZE, state.maxTextSize)
         assertEquals(DEFAULT_DEBOUNCE_MS, state.debounceMs)
@@ -67,6 +68,7 @@ class MermaidSettingsTest {
         val json = settings.toJsConfigJson()
         assertFalse(json.contains("\"theme\""), "Auto theme should not emit theme field")
         assertFalse(json.contains("\"fontFamily\""), "Default fontFamily should be omitted")
+        assertFalse(json.contains("\"layout\""), "Mermaid-default layout should not emit layout field")
         assertTrue(json.contains("\"look\":\"classic\""))
         assertTrue(json.contains("\"maxTextSize\":100000"))
         assertTrue(json.contains("\"maxHeightPercent\":60"))
@@ -149,6 +151,22 @@ class MermaidSettingsTest {
     }
 
     @Test
+    fun `toJsConfigJson with explicit layout includes it`() {
+        settings.loadState(MermaidSettings.State(layout = MermaidLayout.DAGRE))
+        assertTrue(settings.toJsConfigJson().contains("\"layout\":\"dagre\""))
+        settings.loadState(MermaidSettings.State(layout = MermaidLayout.ELK))
+        assertTrue(settings.toJsConfigJson().contains("\"layout\":\"elk\""))
+    }
+
+    @Test
+    fun `toJsConfigJson with Mermaid 12 theme includes it`() {
+        settings.loadState(MermaidSettings.State(theme = MermaidTheme.REDUX_DARK_COLOR))
+        val json = settings.toJsConfigJson()
+        assertTrue(json.contains("\"theme\":\"redux-dark-color\""))
+        assertEquals("redux-dark-color", settings.resolveJsTheme(isDark = false))
+    }
+
+    @Test
     fun `toJsConfigJson with hand-drawn look`() {
         settings.loadState(MermaidSettings.State(look = MermaidLook.HAND_DRAWN))
         val json = settings.toJsConfigJson()
@@ -215,6 +233,7 @@ class MermaidSettingsTest {
         val original = MermaidSettings.State(
             theme = MermaidTheme.NEUTRAL,
             look = MermaidLook.HAND_DRAWN,
+            layout = MermaidLayout.DAGRE,
             fontFamily = MermaidFontFamily.GEORGIA,
             maxTextSize = 50_000,
             debounceMs = 500,
@@ -224,6 +243,7 @@ class MermaidSettingsTest {
         val loaded = settings.state
         assertEquals(MermaidTheme.NEUTRAL, loaded.theme)
         assertEquals(MermaidLook.HAND_DRAWN, loaded.look)
+        assertEquals(MermaidLayout.DAGRE, loaded.layout)
         assertEquals(MermaidFontFamily.GEORGIA, loaded.fontFamily)
         assertEquals(50_000, loaded.maxTextSize)
         assertEquals(500L, loaded.debounceMs)
@@ -237,6 +257,19 @@ class MermaidSettingsTest {
         assertEquals("dark", MermaidTheme.DARK.jsValue)
         assertEquals("forest", MermaidTheme.FOREST.jsValue)
         assertEquals("neutral", MermaidTheme.NEUTRAL.jsValue)
+        assertEquals("neo", MermaidTheme.NEO.jsValue)
+        assertEquals("neo-dark", MermaidTheme.NEO_DARK.jsValue)
+        assertEquals("redux", MermaidTheme.REDUX.jsValue)
+        assertEquals("redux-dark", MermaidTheme.REDUX_DARK.jsValue)
+        assertEquals("redux-color", MermaidTheme.REDUX_COLOR.jsValue)
+        assertEquals("redux-dark-color", MermaidTheme.REDUX_DARK_COLOR.jsValue)
+    }
+
+    @Test
+    fun `MermaidLayout enum has correct jsValues`() {
+        assertNull(MermaidLayout.DEFAULT.jsValue)
+        assertEquals("dagre", MermaidLayout.DAGRE.jsValue)
+        assertEquals("elk", MermaidLayout.ELK.jsValue)
     }
 
     @Test

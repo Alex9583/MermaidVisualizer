@@ -32,14 +32,14 @@ IntelliJ plugin for [Mermaid](https://mermaid.js.org/) diagrams — live preview
 - Export diagrams as SVG or PNG — copy to clipboard or save to file
 - Scroll synchronization between the text editor and the preview
 - Automatic dark/light theme detection and switching
-- Uses the official Mermaid.js library (v11.17.2) — supports all 32+ diagram types
-- **ELK layout support** — diagrams using `layout: elk` (and options like `elk.mergeEdges`) in their YAML frontmatter render with the bundled ELK engine
-- Works offline — Mermaid.js and the ELK layout engine are bundled, no CDN required
+- Uses the official Mermaid.js library (v12.0.0) — supports all 34+ diagram types, including the new use case and agentflow diagrams
+- **ELK and dagre layouts** — ELK is bundled with Mermaid 12 and is its default layout engine; pick `layout: dagre` or `layout: elk` (with `elk.*` options) per diagram in the YAML frontmatter, use the `flowchart-elk` header keyword, or set the default engine globally in the settings
+- Works offline — Mermaid.js (with ELK) is bundled, no CDN required
 
 ### Code Intelligence
 - **Syntax highlighting** — keywords, diagram types, arrows, strings, comments, punctuation
 - **Customizable colors** via Settings > Editor > Color Scheme > Mermaid
-- **Code completion** — 32 diagram types, context-sensitive keywords, node/participant names, arrows, directives
+- **Code completion** — 34 diagram types, context-sensitive keywords, node/participant names, arrows, directives (theme, look, layout)
 - **Go to Definition** (Ctrl+B) — navigate to node/participant declarations
 - **Find Usages** (Alt+F7) — find all references to a node across the diagram
 - **Rename** (Shift+F6) — rename nodes/participants with all references updated
@@ -49,7 +49,7 @@ IntelliJ plugin for [Mermaid](https://mermaid.js.org/) diagrams — live preview
 - **Render error annotations** — Mermaid.js parsing errors surfaced directly in the editor
 
 ### Settings
-- Settings page (Settings > Tools > Mermaid) — theme, look (classic/hand-drawn), font family, max text size, live reload delay, max preview height
+- Settings page (Settings > Tools > Mermaid) — theme (incl. the Mermaid 12 redux/neo themes), look (classic/hand-drawn/neo), layout engine (ELK/dagre), font family, max text size, live reload delay, max preview height
 - **Custom rendering colors** — optionally override the visualizer background color and the line/edge color; disabled by default, so the rendering keeps following the IDE theme unless you opt in
 
 ## Requirements

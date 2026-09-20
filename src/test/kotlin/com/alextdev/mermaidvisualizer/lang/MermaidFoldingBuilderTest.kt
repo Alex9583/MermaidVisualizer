@@ -36,6 +36,20 @@ class MermaidFoldingBuilderTest : BasePlatformTestCase() {
         assertEquals(1, regions.size)
     }
 
+    fun testUsecaseSystemBoundaryFolds() {
+        val regions = getFoldRegions(
+            "usecase-beta\n    systemBoundary Orders\n        Checkout(\"Checkout\")\n    end"
+        )
+        assertEquals(1, regions.size)
+    }
+
+    fun testAgentflowFlowAndGlobalFold() {
+        val regions = getFoldRegions(
+            "agentflow-beta TB\n    global\n        corpus\n    end\n    flow writer[\"Writer\"]\n        draft -.- corpus\n    end"
+        )
+        assertEquals(2, regions.size)
+    }
+
     fun testAltElseFoldsAsOneRegion() {
         val regions = getFoldRegions(
             "sequenceDiagram\n    alt success\n        A->>B: ok\n    else failure\n        A->>B: error\n    end"

@@ -20,6 +20,7 @@ internal class MermaidSettingsConfigurable : Configurable {
 
     private var themeSelection: MermaidTheme? = MermaidTheme.AUTO
     private var lookSelection: MermaidLook? = MermaidLook.CLASSIC
+    private var layoutSelection: MermaidLayout? = MermaidLayout.DEFAULT
     private var fontFamilySelection: MermaidFontFamily? = MermaidFontFamily.DEFAULT
     private var maxTextSizeText: String = DEFAULT_MAX_TEXT_SIZE.toString()
     private var debounceMsText: String = DEFAULT_DEBOUNCE_MS.toString()
@@ -64,6 +65,16 @@ internal class MermaidSettingsConfigurable : Configurable {
                                 MyMessageBundle.message(look.displayKey)
                             }
                         }
+                }
+                row(MyMessageBundle.message("settings.mermaid.layout.label")) {
+                    comboBox(MermaidLayout.entries)
+                        .bindItem(::layoutSelection)
+                        .applyToComponent {
+                            renderer = SimpleListCellRenderer.create("") { layout: MermaidLayout ->
+                                MyMessageBundle.message(layout.displayKey)
+                            }
+                        }
+                        .comment(MyMessageBundle.message("settings.mermaid.layout.comment"))
                 }
                 row(MyMessageBundle.message("settings.mermaid.fontFamily.label")) {
                     comboBox(MermaidFontFamily.entries)
@@ -143,6 +154,7 @@ internal class MermaidSettingsConfigurable : Configurable {
         dialogPanel?.apply()
         return (themeSelection ?: MermaidTheme.AUTO) != state.theme ||
             (lookSelection ?: MermaidLook.CLASSIC) != state.look ||
+            (layoutSelection ?: MermaidLayout.DEFAULT) != state.layout ||
             (fontFamilySelection ?: MermaidFontFamily.DEFAULT) != state.fontFamily ||
             parseMaxTextSize() != state.maxTextSize ||
             parseDebounceMs() != state.debounceMs ||
@@ -160,6 +172,7 @@ internal class MermaidSettingsConfigurable : Configurable {
         val newState = MermaidSettings.State(
             theme = themeSelection ?: MermaidTheme.AUTO,
             look = lookSelection ?: MermaidLook.CLASSIC,
+            layout = layoutSelection ?: MermaidLayout.DEFAULT,
             fontFamily = fontFamilySelection ?: MermaidFontFamily.DEFAULT,
             maxTextSize = parseMaxTextSize(),
             debounceMs = parseDebounceMs(),
@@ -191,6 +204,7 @@ internal class MermaidSettingsConfigurable : Configurable {
     private fun loadFromState(state: MermaidSettings.State) {
         themeSelection = state.theme
         lookSelection = state.look
+        layoutSelection = state.layout
         fontFamilySelection = state.fontFamily
         maxTextSizeText = state.maxTextSize.toString()
         debounceMsText = state.debounceMs.toString()

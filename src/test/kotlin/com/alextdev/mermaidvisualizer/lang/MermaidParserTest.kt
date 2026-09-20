@@ -526,6 +526,80 @@ class MermaidParserTest : BasePlatformTestCase() {
             2, findAll<MermaidBlock>(file).size)
     }
 
+    fun testFlowchartElkIsAFlowchartDiagram() {
+        val file = parseText(
+            "flowchart-elk TD\n" +
+            "    subgraph s1\n" +
+            "        A --> B\n" +
+            "    end\n" +
+            "    B --> C"
+        )
+        val diagram = findFirst<MermaidFlowchartDiagram>(file)
+        assertNotNull("flowchart-elk must share the flowchart PSI (ELK is only the layout)", diagram)
+        assertEquals("TD", diagram!!.flowchartDirection?.text)
+        assertNoErrors(file)
+        assertEquals(1, findAll<MermaidBlock>(file).size)
+    }
+
+    // --- Mermaid 12: use case + agentflow (generic diagrams with their own blocks) ---
+
+    fun testUsecaseSystemBoundaryBlock() {
+        val file = parseText(
+            "usecase-beta\n" +
+            "    direction LR\n" +
+            "    actor Customer(\"Customer\")\n" +
+            "    systemBoundary ordering[\"Ordering System\"]@{ type: package }:::system\n" +
+            "        Browse(\"Browse products\")\n" +
+            "        Checkout(\"Checkout\") <<Core>>:::critical\n" +
+            "    end\n" +
+            "    note for Checkout \"Validates the cart\"\n" +
+            "    Customer starts@-- \"places order\" ---> Checkout\n" +
+            "    Checkout pays@..> : include Browse"
+        )
+        assertNotNull(findFirst<MermaidGenericDiagram>(file))
+        assertNoErrors(file)
+        assertEquals("usecase-beta systemBoundary ... end must parse as a block",
+            1, findAll<MermaidBlock>(file).size)
+    }
+
+    fun testAgentflowFlowAndGlobalBlocks() {
+        val file = parseText(
+            "agentflow-beta TB\n" +
+            "    global\n" +
+            "        corpus[\"Shared corpus\"]@{ shape: refdoc }\n" +
+            "    end\n" +
+            "    flow team[\"Team\"]\n" +
+            "        flow researcher[\"Researcher\"]\n" +
+            "            research[\"research\"]@{ shape: tool, returns: \"Report\" }\n" +
+            "            research -.- corpus\n" +
+            "        end\n" +
+            "        researcher@{ instruction: \"Research the city.\" }\n" +
+            "    end\n" +
+            "    check -- yes --> team\n" +
+            "    fix --x check"
+        )
+        assertNotNull(findFirst<MermaidGenericDiagram>(file))
+        assertNoErrors(file)
+        assertEquals("global + flow + nested flow", 3, findAll<MermaidBlock>(file).size)
+    }
+
+    fun testFlowKeywordIsPlainTextOutsideAgentflow() {
+        // `flow` / `global` / `systemBoundary` only open blocks in their own diagram type
+        val file = parseText(
+            "flowchart TD\n" +
+            "    flow --> global\n" +
+            "    systemBoundary --> flow"
+        )
+        assertNoErrors(file)
+        assertEquals(0, findAll<MermaidBlock>(file).size)
+    }
+
+    fun testUsecaseOrphanEndIsStillAnError() {
+        val file = parseText("usecase-beta\n    actor A\n    end")
+        val errors = PsiTreeUtil.findChildrenOfType(file, PsiErrorElement::class.java)
+        assertFalse("'end' without an opening systemBoundary should stay an error", errors.isEmpty())
+    }
+
     fun testErOrphanEndIsStillAnError() {
         val file = parseText(
             "erDiagram\n" +

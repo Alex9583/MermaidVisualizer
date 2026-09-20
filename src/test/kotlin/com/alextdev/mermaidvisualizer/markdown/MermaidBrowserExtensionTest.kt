@@ -20,16 +20,15 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
         }
     }
 
-    fun testScriptsContainsSevenUrls() {
+    fun testScriptsContainsSixUrls() {
         val scripts = extension.scripts
-        assertEquals(7, scripts.size)
+        assertEquals(6, scripts.size)
         assertTrue("First script URL should end with mermaid.min.js", scripts[0].endsWith("mermaid.min.js"))
-        assertTrue("Second script URL should end with mermaid-elk.js", scripts[1].endsWith("mermaid-elk.js"))
-        assertTrue("Third script URL should end with mermaid-shadow-css-init.js", scripts[2].endsWith("mermaid-shadow-css-init.js"))
-        assertTrue("Fourth script URL should end with mermaid-config-init.js", scripts[3].endsWith("mermaid-config-init.js"))
-        assertTrue("Fifth script URL should end with mermaid-core.js", scripts[4].endsWith("mermaid-core.js"))
-        assertTrue("Sixth script URL should end with mermaid-zoom.js", scripts[5].endsWith("mermaid-zoom.js"))
-        assertTrue("Seventh script URL should end with mermaid-render.js", scripts[6].endsWith("mermaid-render.js"))
+        assertTrue("Second script URL should end with mermaid-shadow-css-init.js", scripts[1].endsWith("mermaid-shadow-css-init.js"))
+        assertTrue("Third script URL should end with mermaid-config-init.js", scripts[2].endsWith("mermaid-config-init.js"))
+        assertTrue("Fourth script URL should end with mermaid-core.js", scripts[3].endsWith("mermaid-core.js"))
+        assertTrue("Fifth script URL should end with mermaid-zoom.js", scripts[4].endsWith("mermaid-zoom.js"))
+        assertTrue("Sixth script URL should end with mermaid-render.js", scripts[5].endsWith("mermaid-render.js"))
     }
 
     fun testStylesContainsOneUrl() {
@@ -44,7 +43,6 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
 
     fun testCanProvideReturnsTrueForKnownResources() {
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid.min.js"))
-        assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-elk.js"))
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-zoom.js"))
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-core.js"))
         assertTrue(extension.canProvide("http://localhost:63342/markdownPreview/abc123/mermaid-render.js"))
@@ -63,9 +61,6 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
     fun testLoadResourceReturnsNonNullForKnownFiles() {
         val jsResource = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid.min.js")
         assertNotNull("mermaid.min.js should be loadable", jsResource)
-
-        val elkResource = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid-elk.js")
-        assertNotNull("mermaid-elk.js should be loadable", elkResource)
 
         val zoomResource = extension.loadResource("http://localhost:63342/markdownPreview/abc123/mermaid-zoom.js")
         assertNotNull("mermaid-zoom.js should be loadable", zoomResource)

@@ -92,7 +92,7 @@ class MermaidLexerTest {
         "wardley-beta", "treeView-beta", "treemap-beta",
         "eventmodeling", "radar-beta", "cynefin-beta",
         "railroad-beta", "railroad-ebnf-beta", "railroad-abnf-beta",
-        "railroad-peg-beta", "swimlane-beta"
+        "railroad-peg-beta", "swimlane-beta", "usecase-beta", "agentflow-beta", "flowchart-elk"
     ])
     fun testDiagramTypeAtLineStart(diagramType: String) {
         val tokens = nonWhitespaceTokens(diagramType)
@@ -374,6 +374,25 @@ class MermaidLexerTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["LR", "RL", "TD", "TB", "BT"])
+    fun testDirectionKeywordsAfterFlowchartElk(dir: String) {
+        val tokens = nonWhitespaceTokens("flowchart-elk $dir")
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals("flowchart-elk", tokens[0].second, "flowchart-elk must not be split into flowchart + -elk")
+        assertEquals(MermaidTokenTypes.KEYWORD, tokens[1].first,
+            "$dir should be KEYWORD after flowchart-elk")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["LR", "RL", "TD", "TB", "BT"])
+    fun testDirectionKeywordsAfterAgentflow(dir: String) {
+        val tokens = nonWhitespaceTokens("agentflow-beta $dir")
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals(MermaidTokenTypes.KEYWORD, tokens[1].first,
+            "$dir should be KEYWORD after agentflow-beta")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["LR", "RL", "TD", "TB", "BT"])
     fun testDirectionNotKeywordAsNodeName(dir: String) {
         // On a subsequent line, direction abbreviations are just identifiers
         val tokens = nonWhitespaceTokens("flowchart LR\n    ${dir}[Exit]")
@@ -433,6 +452,10 @@ class MermaidLexerTest {
         "performanceRequirement", "designConstraint",
         "verifymethod", "docRef",
         "satisfies", "traces", "derives", "refines", "verifies", "copies",
+        // Use case (usecase-beta)
+        "systemBoundary", "for", "json", "include", "extend",
+        // Agentflow (agentflow-beta)
+        "flow", "connector", "global",
         // Accessibility
         "accTitle", "accDescr"
     ])
@@ -696,6 +719,112 @@ class MermaidLexerTest {
         assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "subgraph" })
         assertTrue(tokens.any { it.first == MermaidTokenTypes.END_KW && it.second == "end" })
         assertTrue(tokens.any { it.first == MermaidTokenTypes.ARROW && it.second == "-->" })
+    }
+
+    @Test
+    fun testFlowchartElkDiagramSnippet() {
+        val input = """
+            flowchart-elk TD
+              subgraph wrap [Wrap-up]
+                A --> B
+              end
+              B -->|done| C
+        """.trimIndent()
+        val tokens = nonWhitespaceTokens(input)
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals("flowchart-elk", tokens[0].second)
+        assertEquals(MermaidTokenTypes.KEYWORD, tokens[1].first, "TD should be KEYWORD after flowchart-elk")
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == "subgraph" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.END_KW && it.second == "end" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.ARROW && it.second == "-->" })
+    }
+
+    // ── Mermaid 12: use case + agentflow ────────────────────────────────
+
+    @Test
+    fun testUsecaseDiagramSnippet() {
+        val input = """
+            usecase-beta
+            direction LR
+            actor Staff("Order staff")@{ type: hollow, business: true } <<Employee>>
+            systemBoundary ordering["Ordering System"]@{ type: package }:::system
+              Checkout("Checkout") <<Core>>:::critical
+            end
+            note for Checkout "Validates the cart"
+            Staff --> Checkout
+            Admin --|> Staff
+            Checkout pays@..> : include Payment
+        """.trimIndent()
+        val tokens = nonWhitespaceTokens(input)
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals("usecase-beta", tokens[0].second)
+        for (kw in listOf("direction", "actor", "systemBoundary", "note", "for", "include")) {
+            assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == kw }, "$kw should be KEYWORD")
+        }
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.END_KW && it.second == "end" })
+        for (arrow in listOf("-->", "--|>", "..>")) {
+            assertTrue(tokens.any { it.first == MermaidTokenTypes.ARROW && it.second == arrow }, "$arrow should be ARROW")
+        }
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.SYMBOL && it.second == "<<Employee>>" },
+            "stereotype should be one SYMBOL (got: $tokens)")
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.SYMBOL && it.second == "<<Core>>" })
+        assertFalse(tokens.any { it.first == MermaidTokenTypes.IDENTIFIER && (it.second == "Employee" || it.second == "Core") },
+            "stereotype text must not leak as an identifier")
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.IDENTIFIER && it.second == "pays" }, "edge id stays an identifier")
+    }
+
+    @Test
+    fun testAgentflowDiagramSnippet() {
+        val input = """
+            agentflow-beta TB
+              connector llm["LLM API"]
+              global
+                corpus["Shared corpus"]@{ shape: refdoc }
+              end
+              flow writer["Drafting Agent"]
+                draft["Draft"]@{ shape: task }
+                draft -.- corpus
+              end
+              check -- yes --> writer
+              fix --x check
+        """.trimIndent()
+        val tokens = nonWhitespaceTokens(input)
+        assertEquals(MermaidTokenTypes.DIAGRAM_TYPE, tokens[0].first)
+        assertEquals("agentflow-beta", tokens[0].second)
+        assertEquals(MermaidTokenTypes.KEYWORD, tokens[1].first, "TB should be KEYWORD after agentflow-beta")
+        for (kw in listOf("connector", "global", "flow")) {
+            assertTrue(tokens.any { it.first == MermaidTokenTypes.KEYWORD && it.second == kw }, "$kw should be KEYWORD")
+        }
+        assertEquals(2, tokens.count { it.first == MermaidTokenTypes.END_KW }, "both blocks end with END_KW")
+        for (arrow in listOf("-.-", "--", "-->", "--x")) {
+            assertTrue(tokens.any { it.first == MermaidTokenTypes.ARROW && it.second == arrow }, "$arrow should be ARROW")
+        }
+    }
+
+    @Test
+    fun testClassStereotypeIsSingleSymbol() {
+        val tokens = nonWhitespaceTokens("classDiagram\n    class Shape{\n        <<interface>>\n        noOfVertices\n    }")
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.SYMBOL && it.second == "<<interface>>" },
+            "<<interface>> should be one SYMBOL (got: $tokens)")
+        assertFalse(tokens.any { it.first == MermaidTokenTypes.IDENTIFIER && it.second == "interface" })
+    }
+
+    @Test
+    fun testSequenceBidirectionalArrowIsNotAStereotype() {
+        val tokens = nonWhitespaceTokens("sequenceDiagram\n    Alice<<->>Bob: ping")
+        // `<<->>` is not in the ARROW catalog (documented limitation: it lexes as `<`, `<-`, `>`, `>`); the
+        // stereotype rule must not turn it into one SYMBOL that would swallow `->>Bob`.
+        assertFalse(tokens.any { it.first == MermaidTokenTypes.SYMBOL && it.second.length > 1 },
+            "<<->> must not be lexed as a stereotype (got: $tokens)")
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.IDENTIFIER && it.second == "Alice" })
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.IDENTIFIER && it.second == "Bob" })
+    }
+
+    @Test
+    fun testUnclosedStereotypeFallsBackToSymbols() {
+        val tokens = nonWhitespaceTokens("usecase-beta\n    actor A <<Broken\n    B")
+        assertTrue(tokens.any { it.first == MermaidTokenTypes.IDENTIFIER && it.second == "B" },
+            "an unclosed << must not swallow the next line (got: $tokens)")
     }
 
     @Test
