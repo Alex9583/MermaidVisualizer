@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.13.1] - 2026-10-18
+
+- Update Mermaid.js to v12.2.0 with ELK class cardinality fixes and feedback-edge routing (#33)
+
 ## [1.13.0] - 2026-09-20
 
 - Update Mermaid.js to v12.0.0 with bundled ELK, use case and agentflow diagrams, and a layout setting (#30)
