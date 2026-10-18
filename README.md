@@ -32,7 +32,7 @@ IntelliJ plugin for [Mermaid](https://mermaid.js.org/) diagrams — live preview
 - Export diagrams as SVG or PNG — copy to clipboard or save to file
 - Scroll synchronization between the text editor and the preview
 - Automatic dark/light theme detection and switching
-- Uses the official Mermaid.js library (v12.0.0) — supports all 34+ diagram types, including the new use case and agentflow diagrams
+- Uses the official Mermaid.js library (v12.2.0) — supports all 34+ diagram types, including the new use case and agentflow diagrams
 - **ELK and dagre layouts** — ELK is bundled with Mermaid 12 and is its default layout engine; pick `layout: dagre` or `layout: elk` (with `elk.*` options) per diagram in the YAML frontmatter, use the `flowchart-elk` header keyword, or set the default engine globally in the settings
 - Works offline — Mermaid.js (with ELK) is bundled, no CDN required
 

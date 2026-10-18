@@ -14,7 +14,7 @@
             <li>Open in new tab — pop any diagram into its own full-size preview tab</li>
             <li>Export diagrams as SVG or PNG — copy to clipboard or save to file</li>
             <li>Automatic dark/light theme matching with your IDE</li>
-            <li>All 34+ Mermaid diagram types (including the new use case and agentflow diagrams) — fully offline with bundled Mermaid.js (v12.0.0)</li>
+            <li>All 34+ Mermaid diagram types (including the new use case and agentflow diagrams) — fully offline with bundled Mermaid.js (v12.2.0)</li>
             <li>ELK and dagre layouts — ELK is bundled and Mermaid 12's default; <code>layout: dagre</code> / <code>layout: elk</code> (with <code>elk.*</code> options) work per diagram in the YAML frontmatter, as does the <code>flowchart-elk</code> header keyword, or globally from the settings</li>
         </ul>
 
