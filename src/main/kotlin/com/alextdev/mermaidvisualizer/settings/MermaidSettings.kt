@@ -5,14 +5,27 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 
-internal const val DEFAULT_MAX_TEXT_SIZE = 100_000
+/**
+ * Rendering limits passed to `mermaid.initialize()`. Both keys are in Mermaid's `secure` list, so a diagram
+ * cannot raise them from its front matter or a `%%{init}%%` directive: the settings page is the only way.
+ * The defaults deliberately exceed Mermaid's own (50 000 characters, 500 edges), which guard public websites
+ * against hostile input and are far too tight for generated diagrams opened in an IDE.
+ */
+internal const val DEFAULT_MAX_TEXT_SIZE = 500_000
+internal const val DEFAULT_MAX_EDGES = 2_000
 internal const val DEFAULT_DEBOUNCE_MS = 300L
+/** Delay before a render error reaches the editor annotator, so warnings do not flash while typing. */
+internal const val DEFAULT_ERROR_SETTLE_MS = 1_000L
 internal const val DEFAULT_MAX_HEIGHT_PERCENT = 60
 
 internal const val MIN_MAX_TEXT_SIZE = 1_000
 internal const val MAX_MAX_TEXT_SIZE = 10_000_000
+internal const val MIN_MAX_EDGES = 100
+internal const val MAX_MAX_EDGES = 1_000_000
 internal const val MIN_DEBOUNCE_MS = 0L
 internal const val MAX_DEBOUNCE_MS = 5_000L
+internal const val MIN_ERROR_SETTLE_MS = 0L
+internal const val MAX_ERROR_SETTLE_MS = 5_000L
 internal const val MIN_MAX_HEIGHT_PERCENT = 20
 internal const val MAX_MAX_HEIGHT_PERCENT = 100
 
@@ -20,7 +33,9 @@ internal const val DEFAULT_BACKGROUND_COLOR = "#FFFFFF"
 internal const val DEFAULT_LINE_COLOR = "#888888"
 
 internal fun clampMaxTextSize(value: Int): Int = value.coerceIn(MIN_MAX_TEXT_SIZE, MAX_MAX_TEXT_SIZE)
+internal fun clampMaxEdges(value: Int): Int = value.coerceIn(MIN_MAX_EDGES, MAX_MAX_EDGES)
 internal fun clampDebounceMs(value: Long): Long = value.coerceIn(MIN_DEBOUNCE_MS, MAX_DEBOUNCE_MS)
+internal fun clampErrorSettleMs(value: Long): Long = value.coerceIn(MIN_ERROR_SETTLE_MS, MAX_ERROR_SETTLE_MS)
 internal fun clampMaxHeightPercent(value: Int): Int = value.coerceIn(MIN_MAX_HEIGHT_PERCENT, MAX_MAX_HEIGHT_PERCENT)
 
 private val HEX_COLOR_REGEX = Regex("^#[0-9a-fA-F]{6}$")
@@ -42,16 +57,22 @@ internal class MermaidSettings : PersistentStateComponent<MermaidSettings.State>
         var layout: MermaidLayout = MermaidLayout.DEFAULT,
         var fontFamily: MermaidFontFamily = MermaidFontFamily.DEFAULT,
         var maxTextSize: Int = DEFAULT_MAX_TEXT_SIZE,
+        var maxEdges: Int = DEFAULT_MAX_EDGES,
         var debounceMs: Long = DEFAULT_DEBOUNCE_MS,
+        var errorSettleMs: Long = DEFAULT_ERROR_SETTLE_MS,
         var maxHeightPercent: Int = DEFAULT_MAX_HEIGHT_PERCENT,
         var overrideBackgroundColor: Boolean = false,
         var backgroundColor: String = DEFAULT_BACKGROUND_COLOR,
         var overrideLineColor: Boolean = false,
         var lineColor: String = DEFAULT_LINE_COLOR,
+        /** Opens the welcome / what's new page once after each plugin update (and on first install). */
+        var showWelcomePage: Boolean = true,
     ) {
         init {
             maxTextSize = maxTextSize.coerceIn(MIN_MAX_TEXT_SIZE, MAX_MAX_TEXT_SIZE)
+            maxEdges = maxEdges.coerceIn(MIN_MAX_EDGES, MAX_MAX_EDGES)
             debounceMs = debounceMs.coerceIn(MIN_DEBOUNCE_MS, MAX_DEBOUNCE_MS)
+            errorSettleMs = errorSettleMs.coerceIn(MIN_ERROR_SETTLE_MS, MAX_ERROR_SETTLE_MS)
             maxHeightPercent = maxHeightPercent.coerceIn(MIN_MAX_HEIGHT_PERCENT, MAX_MAX_HEIGHT_PERCENT)
             backgroundColor = normalizeHexColor(backgroundColor, DEFAULT_BACKGROUND_COLOR)
             lineColor = normalizeHexColor(lineColor, DEFAULT_LINE_COLOR)
@@ -65,7 +86,9 @@ internal class MermaidSettings : PersistentStateComponent<MermaidSettings.State>
     override fun loadState(state: State) {
         myState = state.copy(
             maxTextSize = state.maxTextSize.coerceIn(MIN_MAX_TEXT_SIZE, MAX_MAX_TEXT_SIZE),
+            maxEdges = state.maxEdges.coerceIn(MIN_MAX_EDGES, MAX_MAX_EDGES),
             debounceMs = state.debounceMs.coerceIn(MIN_DEBOUNCE_MS, MAX_DEBOUNCE_MS),
+            errorSettleMs = state.errorSettleMs.coerceIn(MIN_ERROR_SETTLE_MS, MAX_ERROR_SETTLE_MS),
             maxHeightPercent = state.maxHeightPercent.coerceIn(MIN_MAX_HEIGHT_PERCENT, MAX_MAX_HEIGHT_PERCENT),
         )
     }
@@ -92,6 +115,8 @@ internal class MermaidSettings : PersistentStateComponent<MermaidSettings.State>
         }
         append(",\"maxTextSize\":")
         append(myState.maxTextSize)
+        append(",\"maxEdges\":")
+        append(myState.maxEdges)
         append(",\"maxHeightPercent\":")
         append(myState.maxHeightPercent)
         val font = myState.fontFamily

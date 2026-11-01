@@ -78,8 +78,8 @@ class MermaidThemeTest {
     @Test
     fun `mermaid render js loads shadow css`() {
         assertTrue(
-            renderJs.contains("mermaid-shadow.css"),
-            "mermaid-render.js should reference mermaid-shadow.css"
+            renderJs.contains("const shadowCss = window.__MERMAID_SHADOW_CSS || '';"),
+            "mermaid-render.js should read the shadow CSS inlined by mermaid-shadow-css-init.js"
         )
     }
 

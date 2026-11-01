@@ -75,6 +75,15 @@ kotlin {
 
 tasks.test {
     useJUnitPlatform()
+    // JavaScript runtime tests executed by MermaidCoreJsRuntimeTest (node --test): re-run when they change.
+    inputs.dir("src/test/js").withPropertyName("jsRuntimeTests").withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
+tasks.processResources {
+    // Release notes of the welcome / what's new page (MermaidChangelog reads the welcome/CHANGELOG.md resource).
+    from(layout.projectDirectory.file("CHANGELOG.md")) {
+        into("welcome")
+    }
 }
 
 tasks.register<org.jetbrains.grammarkit.tasks.GenerateParserTask>("generateMermaidParser") {

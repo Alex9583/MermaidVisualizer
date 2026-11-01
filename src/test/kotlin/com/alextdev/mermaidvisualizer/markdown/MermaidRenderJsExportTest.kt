@@ -62,6 +62,54 @@ class MermaidRenderJsExportTest {
     }
 
     @Test
+    fun `render js renders through the shared pipeline`() {
+        assertTrue(jsContent.contains("function createHost(isDark)"), "The context specifics should be gathered in a host strategy")
+        assertTrue(jsContent.contains("const result = await core.renderInto(container, source, { source: source }, createHost(isDark));"),
+            "Rendering, limits, banner and classification belong to the core pipeline")
+        assertTrue(jsContent.contains("if (result.ok) rememberRender(source, result.svg);"), "Successful renders should be remembered")
+        assertFalse(jsContent.contains("mermaid.render("), "mermaid.render() is called by the pipeline only")
+        assertFalse(jsContent.contains("detectTextSizeExceeded"), "The text size fallback is detected by the pipeline")
+    }
+
+    // --- Error banner tests ---
+
+    @Test
+    fun `render js leaves error display to the pipeline`() {
+        assertFalse(jsContent.contains("showErrorBanner") || jsContent.contains("classifyRenderError"),
+            "Classification and the banner belong to the pipeline")
+        assertTrue(jsContent.contains("core.showRenderError(container, 'Mermaid failed to load. Please try reopening the preview.', null, null, createHost(isDark));"),
+            "The load failure should use the same banner")
+    }
+
+    @Test
+    fun `render js restores the last valid rendering under the banner`() {
+        assertTrue(jsContent.contains("const lastGoodRenders = [];"), "Should remember the last successful renderings")
+        assertTrue(jsContent.contains("rememberRender(source, result.svg);"), "Successful renders should be remembered with their source")
+        assertTrue(jsContent.contains("previousRendering: lastGoodRender"),
+            "The pipeline asks the host for the rendering to put back under the banner, looked up by the failing source")
+        assertTrue(jsContent.contains("core.looksLikeSameDiagram(lastGoodRenders[i].source, source)"),
+            "A rendering is reused only for an edit of the diagram it came from, wherever the block moved")
+        assertTrue(jsContent.contains("core.looksLikeSameDiagram(entry.source, source)"),
+            "Remembering a rendering replaces the entry of the same diagram, so typing does not grow the cache")
+        assertTrue(jsContent.contains("const MAX_REMEMBERED_RENDERS = 16;"), "The cache should be bounded")
+        assertFalse(jsContent.contains("locateSlot") || jsContent.contains("lastGoodSlotCount"),
+            "Block positions must not identify diagrams: a block inserted above shifts them")
+        val reInitIndex = jsContent.indexOf("async function reInitAndRenderAll")
+        assertTrue(jsContent.indexOf("lastGoodRenders.length = 0;", reInitIndex) > reInitIndex,
+            "Theme/config re-renders should drop renderings made with the previous colors")
+    }
+
+    @Test
+    fun `render js posts banner actions as base64 on their tags`() {
+        assertTrue(jsContent.contains("post(tag, core.utf8ToBase64(text));"), "postText should encode arbitrary text as base64 UTF-8")
+        assertTrue(jsContent.contains("copyText: function (text) { postText('mermaid/copy-text', text); }"),
+            "Copy error should post the base64 raw message on mermaid/copy-text")
+        assertTrue(jsContent.contains("reportError: function (json) { postText('mermaid/report-error', json); }"),
+            "Report should post the base64 JSON payload on mermaid/report-error")
+        assertTrue(jsContent.contains("errorActions: errorActions"), "The banner actions should be given to the pipeline through the host")
+    }
+
+    @Test
     fun `render js has messagePipe guard`() {
         assertTrue(jsContent.contains("__IntelliJTools"), "Should check for __IntelliJTools")
         assertTrue(jsContent.contains("messagePipe"), "Should check for messagePipe")
@@ -73,26 +121,21 @@ class MermaidRenderJsExportTest {
         assertTrue(jsContent.contains("mermaid/copy-png"), "Should use mermaid/copy-png tag")
         assertTrue(jsContent.contains("mermaid/save"), "Should use mermaid/save tag")
         assertTrue(jsContent.contains("mermaid/open-in-tab"), "Should use mermaid/open-in-tab tag")
+        assertTrue(jsContent.contains("mermaid/copy-text"), "Should use mermaid/copy-text tag")
+        assertTrue(jsContent.contains("mermaid/report-error"), "Should use mermaid/report-error tag")
     }
 
     @Test
     fun `render js open in tab sends base64 source from data-source attribute`() {
-        assertTrue(
-            jsContent.contains("pipe.post('mermaid/open-in-tab'"),
-            "Open in new tab button should post the source to Kotlin via messagePipe"
-        )
-        assertTrue(
-            jsContent.contains("core.utf8ToBase64(container.getAttribute(ATTR_SOURCE) || '')"),
-            "Open in new tab should read the retained data-source attribute and base64-encode it"
-        )
+        assertTrue(jsContent.contains("openInTab: function () { postText('mermaid/open-in-tab', container.getAttribute(ATTR_SOURCE) || ''); }"),
+            "Open in new tab should post the base64 source kept on the container")
     }
 
     @Test
     fun `render js Save sends payload via messagePipe`() {
-        assertTrue(
-            jsContent.contains("pipe.post('mermaid/save'"),
-            "Save button should send payload to Kotlin via messagePipe"
-        )
+        assertTrue(jsContent.contains("save: function (payload) { post('mermaid/save', payload); }"),
+            "Save button should send its payload to Kotlin on mermaid/save")
+        assertTrue(jsContent.contains("if (pipe) pipe.post(tag, payload);"), "Posts are dropped silently when the pipe is absent")
     }
 
     // --- Zoom integration tests ---
@@ -101,8 +144,9 @@ class MermaidRenderJsExportTest {
     inner class ZoomIntegration {
 
         @Test
-        fun `calls initMermaidZoom`() {
-            assertTrue(jsContent.contains("__initMermaidZoom"), "Should call __initMermaidZoom for zoom support")
+        fun `configures inline zoom through the host`() {
+            assertTrue(jsContent.contains("zoomOptions: zoomOptions"), "The zoom options are given to the pipeline through the host")
+            assertFalse(jsContent.contains("__initMermaidZoom"), "Zoom is initialized by the pipeline")
         }
 
         @Test
@@ -168,6 +212,14 @@ class MermaidRenderJsExportTest {
         }
 
         @Test
+        fun `error overlay sits below the export toolbar and above the zoom viewport`() {
+            val overlay = shadowCssContent.substringAfter(".mermaid-error-overlay {").substringBefore("}")
+            assertTrue(overlay.contains("position: absolute;"), "The overlay should not push the diagram")
+            assertTrue(overlay.contains("top: 38px;"), "The overlay should start below the 28px toolbar buttons")
+            assertTrue(overlay.contains("z-index: 11;"), "The overlay should be above the viewport and the toolbar (z-index 10)")
+        }
+
+        @Test
         fun `has toolbar divider`() {
             assertTrue(
                 shadowCssContent.contains(".mermaid-toolbar-divider"),
@@ -225,11 +277,9 @@ class MermaidRenderJsExportTest {
     }
 
     @Test
-    fun `render js installs link handler posting to open-link tag`() {
-        assertTrue(jsContent.contains("installLinkHandler"), "Should install the shared link click handler")
-        assertTrue(
-            jsContent.contains("mermaid/open-link"),
-            "Link clicks should be posted on the mermaid/open-link BrowserPipe tag"
-        )
+    fun `render js routes link clicks to the open-link tag`() {
+        assertTrue(jsContent.contains("post('mermaid/open-link', url);") && jsContent.contains("openLink: openLink,"),
+            "Link clicks should reach Kotlin on mermaid/open-link through the host")
+        assertFalse(jsContent.contains("installLinkHandler"), "The link handler is installed by the pipeline")
     }
 }

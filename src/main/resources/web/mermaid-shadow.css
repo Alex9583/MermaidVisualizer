@@ -10,6 +10,12 @@
     --mermaid-btn-border: rgba(0, 0, 0, 0.15);
     --mermaid-btn-color: #555;
     --mermaid-btn-hover-bg: rgba(230, 230, 230, 0.95);
+    /* Softer tones for an unfinished diagram (the user is most likely still typing). */
+    --mermaid-warn-color: #9a6400;
+    --mermaid-warn-bg: #fff8e5;
+    --mermaid-warn-border: #f0d595;
+    /* Banner text: explicit, the page text color may not match the banner background. */
+    --mermaid-banner-text: #2b2b2b;
     position: relative;
     display: block;
 }
@@ -22,6 +28,10 @@
     --mermaid-btn-border: rgba(255, 255, 255, 0.15);
     --mermaid-btn-color: #bbb;
     --mermaid-btn-hover-bg: rgba(75, 75, 75, 0.95);
+    --mermaid-warn-color: #e0b35c;
+    --mermaid-warn-bg: #3a3221;
+    --mermaid-warn-border: #5e4f2c;
+    --mermaid-banner-text: #d4d4d4;
 }
 
 svg {
@@ -40,6 +50,125 @@ svg {
     white-space: pre-wrap;
     text-align: left;
     margin: 8px 0;
+}
+
+/* Render error banner (built by showErrorBanner in mermaid-core-banner.js). */
+.mermaid-error-banner {
+    --mermaid-banner-accent: var(--mermaid-error-color);
+    --mermaid-banner-bg: var(--mermaid-error-bg);
+    --mermaid-banner-border: var(--mermaid-error-border);
+    box-sizing: border-box;
+    color: var(--mermaid-banner-text);
+    background: var(--mermaid-banner-bg);
+    border: 1px solid var(--mermaid-banner-border);
+    border-left: 3px solid var(--mermaid-banner-accent);
+    border-radius: 4px;
+    padding: 6px 8px 6px 10px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: left;
+    user-select: text;
+}
+
+.mermaid-error-banner[data-category="incomplete"] {
+    --mermaid-banner-accent: var(--mermaid-warn-color);
+    --mermaid-banner-bg: var(--mermaid-warn-bg);
+    --mermaid-banner-border: var(--mermaid-warn-border);
+}
+
+/* Over the last valid diagram: below the export toolbar (top 4px + 28px buttons), above the zoom viewport.
+   Only its own box captures the mouse, so the diagram around it can still be panned and zoomed. */
+.mermaid-error-overlay {
+    position: absolute;
+    top: 38px;
+    left: 8px;
+    right: 8px;
+    max-width: 720px;
+    max-height: calc(100% - 46px);
+    margin: 0 auto;
+    overflow: auto;
+    z-index: 11;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+/* No diagram to keep (first render failed): a regular box in the flow. */
+.mermaid-error-block {
+    width: 100%;
+    max-width: 720px;
+    margin: 8px auto;
+}
+
+.mermaid-error-main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+}
+
+.mermaid-error-header {
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
+.mermaid-error-label {
+    color: var(--mermaid-banner-accent);
+    font-weight: 600;
+    margin-right: 6px;
+}
+
+/* The label is the first words of the summary ("Syntax error| at line 3: ..."). */
+.mermaid-error-label-merged {
+    margin-right: 0;
+}
+
+.mermaid-error-summary {
+    overflow-wrap: anywhere;
+}
+
+.mermaid-error-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+/* Same look as .mermaid-export-btn, sized for a text label. */
+.mermaid-error-btn {
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 4px;
+    border: 1px solid var(--mermaid-btn-border);
+    background: var(--mermaid-btn-bg);
+    color: var(--mermaid-btn-color);
+    font: inherit;
+    font-size: 11px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.mermaid-error-btn:hover {
+    background: var(--mermaid-btn-hover-bg);
+}
+
+.mermaid-error-raw {
+    margin: 6px 0 0;
+    padding: 6px 8px;
+    max-height: 40vh;
+    overflow: auto;
+    border-top: 1px solid var(--mermaid-banner-border);
+    font-family: monospace;
+    font-size: 11px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.mermaid-error-raw[hidden] {
+    display: none;
+}
+
+/* The diagram under an error banner is the last valid rendering, not the current source. */
+:host(.mermaid-stale) .mermaid-zoom-viewport {
+    opacity: 0.6;
 }
 
 .mermaid-export-toolbar {

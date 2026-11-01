@@ -1,9 +1,12 @@
 package com.alextdev.mermaidvisualizer.editor
 
+import com.alextdev.mermaidvisualizer.MermaidWebResources
+import com.alextdev.mermaidvisualizer.copyErrorToClipboard
 import com.alextdev.mermaidvisualizer.copyPngToClipboard
 import com.alextdev.mermaidvisualizer.copySvgToClipboard
 import com.alextdev.mermaidvisualizer.openDiagramInNewTab
 import com.alextdev.mermaidvisualizer.openExternalLink
+import com.alextdev.mermaidvisualizer.reportErrorOnGitHub
 import com.alextdev.mermaidvisualizer.saveDiagramToFile
 import com.alextdev.mermaidvisualizer.settings.MermaidSettings
 import com.intellij.openapi.Disposable
@@ -46,6 +49,8 @@ internal class MermaidPreviewPanel(
     private val errorQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private val openLinkQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private val openInTabQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    private val copyTextQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    private val reportErrorQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private var errorCallback: ((String) -> Unit)? = null
     private var lastRenderedSource: String? = null
 
@@ -60,6 +65,8 @@ internal class MermaidPreviewPanel(
         Disposer.register(parentDisposable, errorQuery)
         Disposer.register(parentDisposable, openLinkQuery)
         Disposer.register(parentDisposable, openInTabQuery)
+        Disposer.register(parentDisposable, copyTextQuery)
+        Disposer.register(parentDisposable, reportErrorQuery)
 
         scrollQuery.addHandler { fractionStr ->
             val fraction = fractionStr.toDoubleOrNull()
@@ -111,6 +118,22 @@ internal class MermaidPreviewPanel(
             null
         }
 
+        // Error banner buttons (mermaid-core-banner.js showErrorBanner): the raw Mermaid message and the
+        // JSON report payload {raw, summary, category, line, column} arrive as plain strings.
+        copyTextQuery.addHandler { text ->
+            ApplicationManager.getApplication().invokeLater {
+                if (!browser.isDisposed) copyErrorToClipboard(text, project)
+            }
+            null
+        }
+
+        reportErrorQuery.addHandler { payload ->
+            ApplicationManager.getApplication().invokeLater {
+                if (!browser.isDisposed) reportErrorOnGitHub(payload, project)
+            }
+            null
+        }
+
         browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
             override fun onLoadEnd(cefBrowser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
                 if (frame?.isMain == true) {
@@ -125,6 +148,7 @@ internal class MermaidPreviewPanel(
                         injectErrorBridge()
                         injectOpenLinkBridge()
                         injectOpenInTabBridge()
+                        injectErrorActionBridges()
                         pendingRender?.invoke()
                         pendingRender = null
                     }
@@ -206,11 +230,16 @@ internal class MermaidPreviewPanel(
             window.__MERMAID_CONFIG=$configJson;
             document.body.className='$themeClass';
             window.renderDiagram('$encoded',$forceThemeRefresh,$generation).catch(function(e) {
-                console.error('[MermaidVisualizer] renderDiagram failed: ' + e.message);
+                const msg = (e && e.message) || String(e);
+                console.error('[MermaidVisualizer] renderDiagram failed: ' + msg);
                 const c = document.getElementById('mermaid-container');
-                if (c) window.__showError(c, 'Render error: ' + e.message, null, document.body.classList.contains('dark-theme'));
+                if (c) window.__showError(c, 'Render error: ' + msg, null, document.body.classList.contains('dark-theme'));
                 if (typeof window.__mermaidErrorBridge === 'function') {
-                    try { window.__mermaidErrorBridge(JSON.stringify({status:'error',message:e.message||String(e),line:null,column:null,gen:$generation})); } catch(bridgeErr) { console.error('[MermaidVisualizer] error bridge call failed in .catch handler:', bridgeErr); }
+                    try {
+                        const info = window.__mermaidCore ? window.__mermaidCore.parseErrorInfo(e) : {status:'error',message:msg,line:null,column:null};
+                        info.gen = $generation;
+                        window.__mermaidErrorBridge(JSON.stringify(info));
+                    } catch(bridgeErr) { console.error('[MermaidVisualizer] error bridge call failed in .catch handler:', bridgeErr); }
                 }
             });
         """.trimIndent()
@@ -270,6 +299,17 @@ internal class MermaidPreviewPanel(
         browser.cefBrowser.executeJavaScript(js, "mermaid-open-in-tab-bridge", 0)
     }
 
+    private fun injectErrorActionBridges() {
+        if (browser.isDisposed) return
+        val copyTextInjection = copyTextQuery.inject("text")
+        val reportErrorInjection = reportErrorQuery.inject("payload")
+        val js = """
+            window.__copyTextBridge = function(text) { $copyTextInjection };
+            window.__reportErrorBridge = function(payload) { $reportErrorInjection };
+        """.trimIndent()
+        browser.cefBrowser.executeJavaScript(js, "mermaid-error-action-bridge", 0)
+    }
+
     private fun injectExportBridges() {
         if (browser.isDisposed) return
         val copySvgInjection = copySvgQuery.inject("b64")
@@ -289,14 +329,13 @@ internal class MermaidPreviewPanel(
         private val cachedHtml: String by lazy { buildHtml() }
 
         private fun buildHtml(): String {
-            val mermaidJs = loadResource("web/mermaid.min.js")
-            val zoomJs = loadResource("web/mermaid-zoom.js")
-            val coreJs = loadResource("web/mermaid-core.js")
-            val standaloneJs = loadResource("web/mermaid-standalone.js")
-            val standaloneCss = loadResource("web/mermaid-standalone.css")
-            val shadowCss = loadResource("web/mermaid-shadow.css")
+            // mermaid.min.js, then the core modules in dependency order, the zoom module and the adapter.
+            val scripts = (listOf(MermaidWebResources.MERMAID_JS) + MermaidWebResources.STANDALONE_SCRIPTS)
+                .map { loadResource(MermaidWebResources.path(it)) }
+            val standaloneCss = loadResource(MermaidWebResources.path(MermaidWebResources.STANDALONE_CSS))
+            val shadowCss = loadResource(MermaidWebResources.path(MermaidWebResources.SHADOW_CSS))
 
-            return buildString(mermaidJs.length + zoomJs.length + coreJs.length + standaloneJs.length + standaloneCss.length + shadowCss.length + 512) {
+            return buildString(scripts.sumOf { it.length } + standaloneCss.length + shadowCss.length + 1024) {
                 append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\">")
                 append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">")
                 append("<style>")
@@ -307,18 +346,11 @@ internal class MermaidPreviewPanel(
                 append("</style>")
                 append("</head><body>")
                 append("<div id=\"mermaid-container\"></div>")
-                append("<script>")
-                append(mermaidJs)
-                append("</script>")
-                append("<script>")
-                append(coreJs)
-                append("</script>")
-                append("<script>")
-                append(zoomJs)
-                append("</script>")
-                append("<script>")
-                append(standaloneJs)
-                append("</script>")
+                for (script in scripts) {
+                    append("<script>")
+                    append(script)
+                    append("</script>")
+                }
                 append("</body></html>")
             }
         }

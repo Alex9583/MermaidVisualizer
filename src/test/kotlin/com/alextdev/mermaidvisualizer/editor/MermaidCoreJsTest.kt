@@ -1,5 +1,6 @@
 package com.alextdev.mermaidvisualizer.editor
 
+import com.alextdev.mermaidvisualizer.MermaidWebResources
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -8,14 +9,18 @@ import org.junit.jupiter.api.TestInstance
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MermaidCoreJsTest {
 
+    // The core is split into modules (MermaidWebResources.CORE_SCRIPTS): the content checks below run on their
+    // concatenation, in load order, so they describe the core as the browser sees it.
     private lateinit var jsContent: String
 
     @BeforeAll
     fun loadResources() {
-        val jsStream = requireNotNull(
-            javaClass.classLoader.getResourceAsStream("web/mermaid-core.js")
-        ) { "web/mermaid-core.js should be on the classpath" }
-        jsContent = jsStream.use { it.reader(Charsets.UTF_8).readText() }
+        jsContent = MermaidWebResources.CORE_SCRIPTS.joinToString("\n") { name ->
+            val stream = requireNotNull(javaClass.classLoader.getResourceAsStream(MermaidWebResources.path(name))) {
+                "${MermaidWebResources.path(name)} should be on the classpath"
+            }
+            stream.use { it.reader(Charsets.UTF_8).readText() }
+        }
     }
 
     @Test
@@ -62,6 +67,76 @@ class MermaidCoreJsTest {
         assertTrue(jsContent.contains("mermaid-error"), "Should use mermaid-error CSS class")
     }
 
+    // --- Error banner tests ---
+
+    @Test
+    fun `core js exposes the error banner and classification API`() {
+        assertTrue(jsContent.contains("showErrorBanner: showErrorBanner"), "showErrorBanner should be exposed on __mermaidCore")
+        assertTrue(jsContent.contains("classifyRenderError: classifyRenderError"), "classifyRenderError should be exposed on __mermaidCore")
+        assertTrue(jsContent.contains("toRenderErrorPayload: toRenderErrorPayload"), "toRenderErrorPayload should be exposed on __mermaidCore")
+        assertTrue(jsContent.contains("prepareSource: prepareSource"), "prepareSource should be exposed on __mermaidCore")
+        assertTrue(jsContent.contains("looksLikeSameDiagram: looksLikeSameDiagram"), "looksLikeSameDiagram should be exposed on __mermaidCore")
+        assertTrue(jsContent.contains("removeRenderLeftover: removeRenderLeftover"), "removeRenderLeftover should be exposed on __mermaidCore")
+        assertTrue(jsContent.contains("clearShadowContent: clearShadowContent"), "clearShadowContent should be exposed on __mermaidCore")
+        assertTrue(jsContent.contains("JISON_TOKEN_LABELS: JISON_TOKEN_LABELS"), "JISON_TOKEN_LABELS should be exposed on __mermaidCore")
+    }
+
+    @Test
+    fun `core js error banner keeps the last valid diagram`() {
+        assertTrue(jsContent.contains("function showErrorBanner(container, shadowCss, info, isDark, actions)"),
+            "showErrorBanner should follow the (container, shadowCss, info, isDark, actions) contract")
+        assertTrue(jsContent.contains("if (hasRenderedDiagram(shadow)) {"),
+            "The banner should check for a previously rendered diagram before touching the shadow root")
+        assertTrue(jsContent.contains("banner.classList.add('mermaid-error-overlay');"),
+            "Over a kept diagram, the banner should be an overlay")
+        assertTrue(jsContent.contains("banner.classList.add('mermaid-error-block');"),
+            "Without a diagram, the banner should be a regular box")
+        assertTrue(jsContent.contains("const CLASS_STALE = 'mermaid-stale';"), "The host should be marked while the diagram is stale")
+        assertTrue(jsContent.contains("el.classList.remove(CLASS_STALE);"),
+            "A successful render (setShadowContent) should clear the stale marker")
+    }
+
+    @Test
+    fun `core js error banner has category, summary, details and action buttons`() {
+        assertTrue(jsContent.contains("const CLASS_BANNER = 'mermaid-error-banner';"), "Banner should use the mermaid-error-banner class")
+        assertTrue(jsContent.contains("banner.setAttribute('data-category', category);"), "Banner should expose its category")
+        assertTrue(jsContent.contains("rawPre.className = 'mermaid-error-raw';"), "Raw message should be in pre.mermaid-error-raw")
+        assertTrue(jsContent.contains("rawPre.hidden = !detailsOpen;"), "Raw message should be collapsed by default")
+        assertTrue(jsContent.contains("'Details'"), "Banner should have a Details toggle")
+        assertTrue(jsContent.contains("'Copy error'"), "Banner should have a Copy error button")
+        assertTrue(jsContent.contains("'Report on GitHub'"), "Banner should have a Report on GitHub button")
+        assertTrue(jsContent.contains("typeof actions.copyText === 'function'"), "Copy error should only appear with a copyText action")
+        assertTrue(jsContent.contains("typeof actions.reportError === 'function'"), "Report should only appear with a reportError action")
+        assertTrue(jsContent.contains("actions.copyText(raw)"), "Copy error should send the raw message")
+        assertTrue(jsContent.contains("btn.className = 'mermaid-error-btn';"), "Banner buttons should use mermaid-error-btn")
+    }
+
+    @Test
+    fun `core js report payload carries the classification fields`() {
+        val reportIndex = jsContent.indexOf("actions.reportError(JSON.stringify({")
+        assertTrue(reportIndex > 0, "Report should send a JSON string")
+        val payload = jsContent.substring(reportIndex, jsContent.indexOf("}));", reportIndex))
+        for (field in listOf("raw:", "summary:", "category:", "line:", "column:")) {
+            assertTrue(payload.contains(field), "Report payload should contain $field")
+        }
+    }
+
+    @Test
+    fun `core js classifies errors into the documented categories`() {
+        for (category in listOf("'incomplete'", "'syntax'", "'unknown-diagram'", "'limit'", "'generic'")) {
+            assertTrue(jsContent.contains(category), "Should produce the $category category")
+        }
+        assertTrue(jsContent.contains("err.name === 'UnknownDiagramError'"), "Should recognize UnknownDiagramError by name")
+        assertTrue(jsContent.contains("err.hash"), "Should prefer the structured Jison err.hash")
+        assertTrue(jsContent.contains("const MAX_EXPECTED_ITEMS = 4;"), "Summaries should list at most 4 expected tokens")
+    }
+
+    @Test
+    fun `core js suppresses Mermaid's own error diagram`() {
+        assertTrue(jsContent.contains("suppressErrorRendering: true"),
+            "The previews show their own banner: Mermaid should not render its bomb diagram on each failure")
+    }
+
     @Test
     fun `core js initMermaid calls mermaid initialize`() {
         assertTrue(jsContent.contains("initMermaid"), "Should have initMermaid function")
@@ -76,6 +151,7 @@ class MermaidCoreJsTest {
         assertTrue(jsContent.contains("__MERMAID_CONFIG || {}"), "Should fallback to empty object when config is absent")
         assertTrue(jsContent.contains("cfg.theme"), "initMermaid should read cfg.theme")
         assertTrue(jsContent.contains("cfg.maxTextSize"), "initMermaid should read cfg.maxTextSize")
+        assertTrue(jsContent.contains("cfg.maxEdges"), "initMermaid should read cfg.maxEdges")
         assertTrue(jsContent.contains("cfg.look"), "initMermaid should read cfg.look")
         assertTrue(jsContent.contains("cfg.fontFamily"), "initMermaid should read cfg.fontFamily")
     }
@@ -184,8 +260,36 @@ class MermaidCoreJsTest {
     }
 
     @Test
-    fun `core js configures maxTextSize`() {
-        assertTrue(jsContent.contains("maxTextSize"), "Should configure maxTextSize for large diagrams")
+    fun `core js configures rendering limits for large diagrams`() {
+        assertTrue(jsContent.contains("maxTextSize: cfg.maxTextSize ?? DEFAULT_MAX_TEXT_SIZE"),
+            "Should configure maxTextSize for large diagrams")
+        assertTrue(jsContent.contains("maxEdges: cfg.maxEdges ?? DEFAULT_MAX_EDGES"),
+            "Should configure maxEdges: it is a secure key, only mermaid.initialize can raise it")
+        assertTrue(jsContent.contains("const DEFAULT_MAX_TEXT_SIZE = 500000;"), "JS fallback should mirror the Kotlin default")
+        assertTrue(jsContent.contains("const DEFAULT_MAX_EDGES = 2000;"), "JS fallback should mirror the Kotlin default")
+    }
+
+    @Test
+    fun `core js detects the max text size fallback diagram`() {
+        assertTrue(jsContent.contains("function detectTextSizeExceeded(source, svg)"), "Should have detectTextSizeExceeded")
+        assertTrue(jsContent.contains("'Maximum text size in diagram exceeded'"),
+            "Should look for the fallback diagram Mermaid renders instead of throwing")
+        assertTrue(jsContent.contains("if (size <= limit) return null;"),
+            "The marker alone is not enough: the source must actually exceed maxTextSize")
+        assertTrue(jsContent.contains("Increase \"Max text size\" in ' + SETTINGS_PATH"), "Error should name the plugin setting")
+        assertTrue(jsContent.contains("detectTextSizeExceeded: detectTextSizeExceeded"), "Should be exposed on __mermaidCore")
+    }
+
+    @Test
+    fun `core js rewrites the edge limit error to name the plugin setting`() {
+        assertTrue(jsContent.contains("function describeRenderError(err)"), "Should have describeRenderError")
+        assertTrue(jsContent.contains("Edge limit exceeded"), "Should match Mermaid's edge limit error")
+        assertTrue(jsContent.contains("Increase \"Max edges\" in ' + SETTINGS_PATH"), "Error should name the plugin setting")
+        assertTrue(jsContent.contains("describeRenderError: describeRenderError"), "Should be exposed on __mermaidCore")
+        assertTrue(jsContent.contains("info.summary = describeRenderError(err);"),
+            "The rewritten (setting-aware) message should be the summary of the limit category")
+        assertTrue(jsContent.contains("message: classified.raw,"),
+            "parseErrorInfo should report the raw Mermaid message to the Kotlin annotator")
     }
 
     // --- Link handling tests ---

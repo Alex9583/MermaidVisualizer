@@ -13,6 +13,7 @@
             <li>Zoom (<code>Ctrl+wheel</code>), pan, fit-to-window and 1:1 controls</li>
             <li>Open in new tab — pop any diagram into its own full-size preview tab</li>
             <li>Export diagrams as SVG or PNG — copy to clipboard or save to file</li>
+            <li>Friendly render errors — the preview keeps the last valid diagram visible under a banner that explains the error in one line, shows the raw Mermaid message on demand, and offers Copy error and Report on GitHub (prefilled issue; your diagram is never included)</li>
             <li>Automatic dark/light theme matching with your IDE</li>
             <li>All 34+ Mermaid diagram types (including the new use case and agentflow diagrams) — fully offline with bundled Mermaid.js (v12.2.0)</li>
             <li>ELK and dagre layouts — ELK is bundled and Mermaid 12's default; <code>layout: dagre</code> / <code>layout: elk</code> (with <code>elk.*</code> options) work per diagram in the YAML frontmatter, as does the <code>flowchart-elk</code> header keyword, or globally from the settings</li>
@@ -28,12 +29,18 @@
             <li>Structure View (<code>Alt+7</code>) — hierarchical view of diagrams, blocks, and nodes</li>
             <li>Code Folding — fold subgraphs, loop/alt/opt/par blocks, and consecutive comments</li>
             <li>Inspections &amp; quick-fixes — unknown diagram types (with typo suggestions), invalid arrows, unused nodes</li>
-            <li>Render error annotations — Mermaid.js parsing errors surfaced directly in the editor</li>
+            <li>Render error annotations — Mermaid.js parsing errors and exceeded rendering limits surfaced directly in the <code>.mmd</code> editor, with the same one-line explanation as the preview banner; highlighted only once settled (configurable error highlight delay), unfinished lines shown as weak warnings, and <code>Alt+Enter</code> on the annotation to copy the error or report it on GitHub</li>
+        </ul>
+
+        <h2>Welcome &amp; What's New</h2>
+        <ul>
+            <li>Welcome / What's New page — after you install or update the plugin, the first project you open shows a preview tab, once per version: a quick tour, two live example diagrams, the settings, ways to support the project, and the release notes of every version since the one you last saw. Reopen it anytime from <code>Help &gt; Mermaid Visualizer: What's New</code></li>
         </ul>
 
         <h2>Settings</h2>
-        <p>Configurable via <code>Settings &gt; Tools &gt; Mermaid</code> — theme (incl. the Mermaid 12 redux/neo themes), look (classic/hand-drawn/neo), layout engine (ELK/dagre), font family, max text size, live reload delay, max preview height.</p>
+        <p>Configurable via <code>Settings &gt; Tools &gt; Mermaid</code> — theme (incl. the Mermaid 12 redux/neo themes), look (classic/hand-drawn/neo), layout engine (ELK/dagre), font family, max text size and max edges (rendering limits, raised well above Mermaid's defaults so large generated diagrams render out of the box), live reload delay, error highlight delay, max preview height.</p>
         <p>Custom rendering colors — optionally override the visualizer background color and the line/edge color (disabled by default, so the rendering keeps following your IDE theme unless you opt in).</p>
+        <p>Show the welcome page after plugin updates — on by default; turn it off to skip the What's New tab after updates (<code>Help &gt; Mermaid Visualizer: What's New</code> still opens it on demand).</p>
         <p>Customizable syntax colors via <code>Settings &gt; Editor &gt; Color Scheme &gt; Mermaid</code>.</p>
 
         <h2>Usage</h2>
@@ -67,8 +74,16 @@
         <notificationGroup id="Mermaid Visualizer"
                            displayType="BALLOON"
                            key="notification.group.mermaid"/>
+        <notificationGroup id="Mermaid Visualizer Welcome"
+                           displayType="STICKY_BALLOON"
+                           key="notification.group.mermaid.welcome"/>
         <applicationService
             serviceImplementation="com.alextdev.mermaidvisualizer.settings.MermaidSettings"/>
+        <!-- Welcome / what's new page, once per plugin version -->
+        <applicationService
+            serviceImplementation="com.alextdev.mermaidvisualizer.welcome.MermaidWelcomeState"/>
+        <postStartupActivity
+            implementation="com.alextdev.mermaidvisualizer.welcome.MermaidWelcomeStartupActivity"/>
         <completion.contributor
             language="Mermaid"
             implementationClass="com.alextdev.mermaidvisualizer.lang.completion.MermaidCompletionContributor"/>
@@ -125,6 +140,14 @@
             language="Mermaid"
             implementationClass="com.alextdev.mermaidvisualizer.lang.MermaidFoldingBuilder"/>
     </extensions>
+
+    <actions>
+        <!-- Text and description: action.MermaidVisualizer.ShowWhatsNew.* in messages.MyMessageBundle -->
+        <action id="MermaidVisualizer.ShowWhatsNew"
+                class="com.alextdev.mermaidvisualizer.welcome.MermaidShowWelcomePageAction">
+            <add-to-group group-id="HelpMenu" anchor="last"/>
+        </action>
+    </actions>
 
     <extensions defaultExtensionNs="org.intellij.markdown">
         <browserPreviewExtensionProvider

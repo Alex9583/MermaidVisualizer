@@ -1,5 +1,6 @@
 package com.alextdev.mermaidvisualizer.markdown
 
+import com.alextdev.mermaidvisualizer.MermaidWebResources
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class MermaidIntegrationTest : BasePlatformTestCase() {
@@ -57,41 +58,16 @@ class MermaidIntegrationTest : BasePlatformTestCase() {
     fun testScriptOrderIsCorrect() {
         val extension = MermaidBrowserExtension()
         try {
-            val scripts = extension.scripts
-            assertEquals("Should have exactly 6 scripts", 6, scripts.size)
-
-            val names = scripts.map { it.substringAfterLast('/') }
-
-            assertEquals(
-                "mermaid.min.js must be loaded first (library before bootstrap)",
-                "mermaid.min.js",
-                names[0]
-            )
-            assertEquals(
-                "mermaid-shadow-css-init.js must be loaded second (shadow CSS before render)",
-                "mermaid-shadow-css-init.js",
-                names[1]
-            )
-            assertEquals(
-                "mermaid-config-init.js must be loaded third (config before render)",
-                "mermaid-config-init.js",
-                names[2]
-            )
-            assertEquals(
-                "mermaid-core.js must be loaded fourth (shared module before zoom and render)",
-                "mermaid-core.js",
-                names[3]
-            )
-            assertEquals(
-                "mermaid-zoom.js must be loaded fifth (zoom module before render)",
-                "mermaid-zoom.js",
-                names[4]
-            )
-            assertEquals(
-                "mermaid-render.js must be loaded sixth (bootstrap after library, CSS, config, core, and zoom)",
-                "mermaid-render.js",
-                names[5]
-            )
+            val names = extension.scripts.map { it.substringAfterLast('/') }
+            // Library first, then the generated shadow CSS and config scripts the core reads at load time,
+            // then the core modules in dependency order, the zoom module and finally the adapter.
+            assertEquals("mermaid.min.js", names.first())
+            assertEquals("mermaid-shadow-css-init.js", names[1])
+            assertEquals("mermaid-config-init.js", names[2])
+            assertEquals(MermaidWebResources.CORE_SCRIPTS, names.subList(3, 3 + MermaidWebResources.CORE_SCRIPTS.size))
+            assertEquals("mermaid-zoom.js", names[names.size - 2])
+            assertEquals("mermaid-render.js", names.last())
+            assertEquals(3 + MermaidWebResources.MARKDOWN_SCRIPTS.size, names.size)
         } finally {
             extension.dispose()
         }
