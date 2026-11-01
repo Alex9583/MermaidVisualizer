@@ -27,8 +27,12 @@ class MermaidResourceLoadingTest {
         val stream = javaClass.classLoader.getResourceAsStream("web/mermaid-core.js")
         assertNotNull(stream, "web/mermaid-core.js should be on the classpath")
         val content = stream!!.use { it.readBytes().toString(Charsets.UTF_8) }
-        assertTrue(content.contains("__mermaidCore"), "mermaid-core.js should contain '__mermaidCore'")
-        assertTrue(content.contains("mermaid.initialize"), "mermaid-core.js should contain 'mermaid.initialize'")
+        assertTrue(content.contains("window.__mermaidCore = core;"), "mermaid-core.js should create the __mermaidCore facade")
+        assertTrue(content.contains("define: define"), "mermaid-core.js should be the module registry")
+        val runtime = javaClass.classLoader.getResourceAsStream("web/mermaid-core-runtime.js")
+        assertNotNull(runtime, "web/mermaid-core-runtime.js should be on the classpath")
+        assertTrue(runtime!!.use { it.readBytes().toString(Charsets.UTF_8) }.contains("mermaid.initialize"),
+            "mermaid-core-runtime.js should initialize Mermaid")
     }
 
     @Test

@@ -83,6 +83,14 @@ class MermaidLinkOpenerTest {
     }
 
     @Test
+    fun `raised length limit still validates the scheme`() {
+        val longUrl = "https://example.com/" + "a".repeat(3000)
+        assertTrue(isSafeExternalUrl(longUrl, maxLength = 6000))
+        assertFalse(isSafeExternalUrl(longUrl + "a".repeat(3000), maxLength = 6000))
+        assertFalse(isSafeExternalUrl("file:///" + "a".repeat(3000), maxLength = 6000))
+    }
+
+    @Test
     fun `rejects unparseable url`() {
         assertFalse(isSafeExternalUrl("https://exa mple.com"))
     }

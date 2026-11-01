@@ -74,6 +74,45 @@ class MermaidSettingsConfigurableTest : BasePlatformTestCase() {
         assertEquals(1000, settings.state.maxTextSize)
     }
 
+    fun testApplyPersistsMaxEdges() {
+        configurable.createComponent()
+        val settings = service<MermaidSettings>()
+        settings.loadState(MermaidSettings.State(maxEdges = 5_000))
+        configurable.reset()
+        assertFalse("Reset should clear modifications", configurable.isModified)
+        configurable.apply()
+        assertEquals(5_000, settings.state.maxEdges)
+    }
+
+    fun testApplyClampsInvalidMaxEdges() {
+        configurable.createComponent()
+        val settings = service<MermaidSettings>()
+        settings.loadState(MermaidSettings.State(maxEdges = 10))
+        configurable.reset()
+        configurable.apply()
+        assertEquals(MIN_MAX_EDGES, settings.state.maxEdges)
+    }
+
+    fun testApplyPersistsErrorSettleMsAndWelcomeFlag() {
+        configurable.createComponent()
+        val settings = service<MermaidSettings>()
+        settings.loadState(MermaidSettings.State(errorSettleMs = 2_500, showWelcomePage = false))
+        configurable.reset()
+        assertFalse("Reset should clear modifications", configurable.isModified)
+        configurable.apply()
+        assertEquals(2_500L, settings.state.errorSettleMs)
+        assertFalse(settings.state.showWelcomePage)
+    }
+
+    fun testApplyClampsInvalidErrorSettleMs() {
+        configurable.createComponent()
+        val settings = service<MermaidSettings>()
+        settings.loadState(MermaidSettings.State(errorSettleMs = 99_000))
+        configurable.reset()
+        configurable.apply()
+        assertEquals(MAX_ERROR_SETTLE_MS, settings.state.errorSettleMs)
+    }
+
     fun testApplyClampsInvalidDebounceMs() {
         configurable.createComponent()
         val settings = service<MermaidSettings>()

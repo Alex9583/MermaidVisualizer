@@ -5,3 +5,8 @@
     min-height: 40px;
     position: relative;
 }
+
+/* Room for the error banner laid over the last valid rendering of a short diagram. */
+.mermaid-diagram.mermaid-stale {
+    min-height: 160px;
+}

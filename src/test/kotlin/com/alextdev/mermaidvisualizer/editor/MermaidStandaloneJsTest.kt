@@ -1,5 +1,6 @@
 package com.alextdev.mermaidvisualizer.editor
 
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -52,7 +53,41 @@ class MermaidStandaloneJsTest {
 
     @Test
     fun `standalone js has error handling`() {
-        assertTrue(jsContent.contains("showError"), "Should delegate error display to core.showError")
+        assertTrue(jsContent.contains("core.showError(container, shadowCss, 'Failed to initialize Mermaid: ' + e.message, null, false);"),
+            "The page-load initialization failure should use the plain error box (no diagram to keep yet)")
+        assertTrue(jsContent.contains("core.showRenderError(container, 'Failed to initialize Mermaid: ' + e.message, null, null, host);"),
+            "A later initialization failure should show the shared banner over the last valid diagram")
+    }
+
+    @Test
+    fun `standalone js renders through the shared pipeline and reports its result`() {
+        assertTrue(jsContent.contains("function createHost(isDark)"), "The context specifics should be gathered in a host strategy")
+        assertTrue(jsContent.contains("const result = await core.renderInto(container, context.source, context, host);"),
+            "Rendering, limits, banner and classification belong to the core pipeline")
+        assertTrue(jsContent.contains("reportRenderResult(result.ok ? { status: 'ok' } : core.toRenderErrorPayload(result.error), generation);"),
+            "The pipeline result should reach the editor annotator through the error bridge")
+        assertFalse(jsContent.contains("mermaid.render("), "mermaid.render() is called by the pipeline only")
+        assertFalse(jsContent.contains("showErrorBanner"), "The banner is shown by the pipeline only")
+    }
+
+    @Test
+    fun `standalone js delegates rendering limits to the core pipeline`() {
+        assertFalse(jsContent.contains("detectTextSizeExceeded"), "The text size fallback is detected by the pipeline")
+        assertTrue(jsContent.contains("core.renderInto("), "Rendering goes through the pipeline, which reports limits as errors")
+    }
+
+    @Test
+    fun `standalone js keeps reported lines relative to the document`() {
+        assertTrue(jsContent.contains("const context = core.prepareSource(decoded);"),
+            "The trimmed source and the removed leading lines should be passed as classification context")
+    }
+
+    @Test
+    fun `standalone js wires the error banner buttons to their bridges`() {
+        assertTrue(jsContent.contains("return typeof window[name] === 'function';"), "Bridges are looked up by name at call time")
+        assertTrue(jsContent.contains("copyText: bridge('__copyTextBridge')"), "Copy error should be guarded by its bridge")
+        assertTrue(jsContent.contains("reportError: bridge('__reportErrorBridge')"), "Report should be guarded by its bridge")
+        assertTrue(jsContent.contains("errorActions: errorActions"), "The banner actions should be given to the pipeline through the host")
     }
 
     @Test
@@ -83,6 +118,8 @@ class MermaidStandaloneJsTest {
     @Test
     fun `standalone js exposes showError on window`() {
         assertTrue(jsContent.contains("window.__showError"), "Should expose __showError for Kotlin-side fallback error display")
+        assertTrue(jsContent.contains("core.showRenderError(container, message, null, renderId, createHost(isDark));"),
+            "The Kotlin fallback should also keep the last valid diagram")
     }
 
     @Test
@@ -121,26 +158,49 @@ class MermaidStandaloneJsTest {
 
     @Test
     fun `standalone js wires open in tab bridge into toolbar and guard`() {
-        assertTrue(jsContent.contains("__openInTabBridge"), "Should reference __openInTabBridge")
-        assertTrue(
-            jsContent.contains("typeof window.__openInTabBridge !== 'function'"),
-            "The no-bridges guard should also consider __openInTabBridge"
-        )
-        assertTrue(
-            jsContent.contains("openInTab: typeof window.__openInTabBridge === 'function'"),
-            "The openInTab callback should be passed to core.createExportToolbar only when the bridge exists"
-        )
+        assertTrue(jsContent.contains("const openInTab = bridge('__openInTabBridge');"), "Should look the __openInTabBridge up")
+        assertTrue(jsContent.contains("if (!openInTab && !copySvg && !copyPng && !save) return null;"),
+            "The no-bridges guard should also consider __openInTabBridge")
+        assertTrue(jsContent.contains("openInTab: openInTab ? function () { openInTab(''); } : null,"),
+            "The openInTab callback should be passed to core.createExportToolbar only when the bridge exists")
     }
 
     @Test
-    fun `standalone js references toolbar CSS class for zoom init`() {
-        assertTrue(jsContent.contains("mermaid-export-toolbar"), "Should reference mermaid-export-toolbar CSS class for zoom init")
+    fun `standalone js leaves toolbar and zoom mounting to the pipeline`() {
+        assertTrue(jsContent.contains("createToolbar: createToolbar"), "The toolbar factory is given to the pipeline through the host")
+        assertTrue(jsContent.contains("zoomOptions: zoomOptions"), "The zoom options are given to the pipeline through the host")
+        assertFalse(jsContent.contains("mermaid-export-toolbar"), "The toolbar element is located by the pipeline")
+        assertFalse(jsContent.contains("__initMermaidZoom"), "Zoom is initialized by the pipeline")
     }
 
     @Test
     fun `shadow css has toolbar styling`() {
         assertTrue(shadowCssContent.contains(".mermaid-export-toolbar"), "Shadow CSS should style mermaid-export-toolbar")
         assertTrue(shadowCssContent.contains(".mermaid-export-btn"), "Shadow CSS should style mermaid-export-btn")
+    }
+
+    @Test
+    fun `shadow css styles the error banner`() {
+        assertTrue(shadowCssContent.contains(".mermaid-error-banner {"), "Shadow CSS should style the error banner")
+        assertTrue(shadowCssContent.contains(".mermaid-error-overlay {"), "Shadow CSS should style the overlay variant")
+        assertTrue(shadowCssContent.contains("position: absolute;"), "The overlay should be absolutely positioned")
+        assertTrue(shadowCssContent.contains(".mermaid-error-block {"), "Shadow CSS should style the block variant")
+        assertTrue(shadowCssContent.contains(".mermaid-error-btn {"), "Shadow CSS should style the banner buttons")
+        assertTrue(shadowCssContent.contains(".mermaid-error-raw[hidden]"), "Collapsed details should be hidden")
+        assertTrue(shadowCssContent.contains(".mermaid-error-banner[data-category=\"incomplete\"]"),
+            "Incomplete diagrams should get the softer variant")
+        assertTrue(shadowCssContent.contains(":host(.mermaid-stale) .mermaid-zoom-viewport"),
+            "The stale diagram under the banner should be dimmed")
+    }
+
+    @Test
+    fun `shadow css defines warning colors for both themes`() {
+        val hostBlock = shadowCssContent.substring(shadowCssContent.indexOf(":host {"), shadowCssContent.indexOf(":host(.dark) {"))
+        val darkBlock = shadowCssContent.substring(shadowCssContent.indexOf(":host(.dark) {"))
+        for (variable in listOf("--mermaid-warn-color:", "--mermaid-warn-bg:", "--mermaid-warn-border:")) {
+            assertTrue(hostBlock.contains(variable), "Light theme should define $variable")
+            assertTrue(darkBlock.substringBefore("}").contains(variable), "Dark theme should define $variable")
+        }
     }
 
     @Test
@@ -158,8 +218,9 @@ class MermaidStandaloneJsTest {
     // --- Zoom integration tests ---
 
     @Test
-    fun `standalone js calls initMermaidZoom`() {
-        assertTrue(jsContent.contains("__initMermaidZoom"), "Should call __initMermaidZoom for zoom support")
+    fun `standalone js enables keyboard zoom and scroll sync`() {
+        assertTrue(jsContent.contains("enableKeyboard: true"), "Keyboard zoom shortcuts belong to the standalone editor")
+        assertTrue(jsContent.contains("scrollSyncCallback: syncScrollToEditor"), "Zoom pan should drive the editor scroll")
     }
 
     @Test
@@ -173,9 +234,9 @@ class MermaidStandaloneJsTest {
     }
 
     @Test
-    fun `standalone js installs link handler with openLinkBridge`() {
-        assertTrue(jsContent.contains("installLinkHandler"), "Should install the shared link click handler")
-        assertTrue(jsContent.contains("__openLinkBridge"), "Link clicks should route through the __openLinkBridge JCEF bridge")
+    fun `standalone js routes link clicks through openLinkBridge`() {
+        assertTrue(jsContent.contains("openLink: openLink"), "The link handler target is given to the pipeline through the host")
+        assertTrue(jsContent.contains("bridge('__openLinkBridge')"), "Link clicks should route through the __openLinkBridge JCEF bridge")
     }
 
     @Test

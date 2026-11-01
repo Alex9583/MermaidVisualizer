@@ -1,5 +1,6 @@
 package com.alextdev.mermaidvisualizer.markdown
 
+import com.alextdev.mermaidvisualizer.MermaidWebResources
 import com.alextdev.mermaidvisualizer.settings.MERMAID_SETTINGS_TOPIC
 import com.alextdev.mermaidvisualizer.settings.MermaidSettings
 import com.alextdev.mermaidvisualizer.settings.MermaidSettingsListener
@@ -17,20 +18,11 @@ import org.intellij.plugins.markdown.ui.preview.ResourceProvider
 
 private val LOG = Logger.getInstance("MermaidVisualizer")
 
-private const val RES_MERMAID_JS = "mermaid.min.js"
-private const val RES_ZOOM_JS = "mermaid-zoom.js"
-private const val RES_CORE_JS = "mermaid-core.js"
-private const val RES_RENDER_JS = "mermaid-render.js"
-private const val RES_PREVIEW_CSS = "mermaid-preview.css"
-private const val RES_SHADOW_CSS = "mermaid-shadow.css"
-private const val RES_SHADOW_CSS_INIT_JS = "mermaid-shadow-css-init.js"
-private const val RES_CONFIG_INIT_JS = "mermaid-config-init.js"
-
-private val RESOURCE_NAMES = setOf(
-    RES_MERMAID_JS, RES_ZOOM_JS, RES_CORE_JS, RES_RENDER_JS,
-    RES_PREVIEW_CSS, RES_SHADOW_CSS, RES_SHADOW_CSS_INIT_JS,
-    RES_CONFIG_INIT_JS,
-)
+// Load order of the preview scripts: the library, the two generated init scripts (shadow CSS, settings
+// config), then the plugin scripts of MermaidWebResources (core modules, zoom, adapter).
+private val SCRIPT_NAMES: List<String> =
+    listOf(MermaidWebResources.MERMAID_JS, MermaidWebResources.SHADOW_CSS_INIT_JS, MermaidWebResources.CONFIG_INIT_JS) +
+        MermaidWebResources.MARKDOWN_SCRIPTS
 
 internal const val TAG_CONFIG_UPDATE = "mermaid/config"
 
@@ -82,14 +74,7 @@ internal class MermaidBrowserExtension(
 
     override val scripts: List<String>
         get() = try {
-            listOf(
-                PreviewStaticServer.getStaticUrl(this, RES_MERMAID_JS),
-                PreviewStaticServer.getStaticUrl(this, RES_SHADOW_CSS_INIT_JS),
-                PreviewStaticServer.getStaticUrl(this, RES_CONFIG_INIT_JS),
-                PreviewStaticServer.getStaticUrl(this, RES_CORE_JS),
-                PreviewStaticServer.getStaticUrl(this, RES_ZOOM_JS),
-                PreviewStaticServer.getStaticUrl(this, RES_RENDER_JS),
-            )
+            SCRIPT_NAMES.map { PreviewStaticServer.getStaticUrl(this, it) }
         } catch (e: Exception) {
             LOG.error("Failed to generate script URLs for Mermaid preview", e)
             emptyList()
@@ -98,7 +83,7 @@ internal class MermaidBrowserExtension(
     override val styles: List<String>
         get() = try {
             listOf(
-                PreviewStaticServer.getStaticUrl(this, RES_PREVIEW_CSS),
+                PreviewStaticServer.getStaticUrl(this, MermaidWebResources.PREVIEW_CSS),
             )
         } catch (e: Exception) {
             LOG.error("Failed to generate style URLs for Mermaid preview", e)
@@ -110,7 +95,7 @@ internal class MermaidBrowserExtension(
 
     private fun extractResourceName(resourceName: String): String? {
         val lastSegment = resourceName.substringAfterLast('/')
-        return if (lastSegment in RESOURCE_NAMES) lastSegment else null
+        return if (lastSegment in MermaidWebResources.MARKDOWN_RESOURCE_NAMES) lastSegment else null
     }
 
     override fun canProvide(resourceName: String): Boolean {
@@ -120,7 +105,7 @@ internal class MermaidBrowserExtension(
     override fun loadResource(resourceName: String): ResourceProvider.Resource? {
         val resolved = extractResourceName(resourceName) ?: return null
 
-        if (resolved == RES_CONFIG_INIT_JS) {
+        if (resolved == MermaidWebResources.CONFIG_INIT_JS) {
             return try {
                 val bytes = buildConfigInitScript()
                 ResourceProvider.Resource(bytes, "application/javascript")
@@ -156,10 +141,10 @@ internal class MermaidBrowserExtension(
     }
 
     private fun loadResourceBytes(name: String): ByteArray? {
-        if (name == RES_SHADOW_CSS_INIT_JS) {
+        if (name == MermaidWebResources.SHADOW_CSS_INIT_JS) {
             return buildShadowCssInitScript()
         }
-        return javaClass.classLoader.getResourceAsStream("web/$name")?.use { it.readBytes() }
+        return javaClass.classLoader.getResourceAsStream(MermaidWebResources.path(name))?.use { it.readBytes() }
     }
 
     private fun buildConfigInitScript(): ByteArray {
@@ -168,7 +153,7 @@ internal class MermaidBrowserExtension(
     }
 
     private fun buildShadowCssInitScript(): ByteArray? {
-        val cssBytes = javaClass.classLoader.getResourceAsStream("web/mermaid-shadow.css")
+        val cssBytes = javaClass.classLoader.getResourceAsStream(MermaidWebResources.path(MermaidWebResources.SHADOW_CSS))
             ?.use { it.readBytes() } ?: return null
         val cssText = cssBytes.toString(Charsets.UTF_8)
             .replace("\\", "\\\\")

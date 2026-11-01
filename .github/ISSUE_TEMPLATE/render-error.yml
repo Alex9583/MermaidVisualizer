@@ -1,0 +1,63 @@
+# Issue form targeted by the plugin's "Report on GitHub" button (preview banner and editor intention):
+# the URL prefills the fields below through their ids (see MermaidErrorReport.kt, buildGitHubIssueUrl).
+# The diagram itself is never sent automatically; the reporter pastes a minimal example if they want to.
+name: Render error
+description: A diagram shows an error banner or does not render in the Mermaid Visualizer plugin
+title: "[Bug] Render error: "
+labels: ["bug"]
+assignees: ["Alex9583"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a render error. When you come from the plugin's **Report on GitHub**
+        button, the error and your environment are already filled in below, and the full report is on your clipboard.
+        Your diagram is never sent automatically.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What were you doing when the error appeared (typing, opening a file, changing a setting…), and what did you expect instead?
+      placeholder: I was editing a flowchart in a .mmd file and the preview showed the banner as soon as I…
+    validations:
+      required: true
+  - type: textarea
+    id: diagram
+    attributes:
+      label: Diagram
+      description: A minimal Mermaid diagram that reproduces the error, with anything confidential removed. Leave empty if the error happens with any diagram.
+      render: mermaid
+  - type: input
+    id: summary
+    attributes:
+      label: Error summary
+      description: The one-line explanation shown by the plugin (prefilled).
+      placeholder: "Line 3 looks unfinished: expected ]"
+  - type: dropdown
+    id: category
+    attributes:
+      label: Error category
+      description: As classified by the plugin (prefilled).
+      options:
+        - incomplete
+        - syntax
+        - unknown-diagram
+        - limit
+        - generic
+  - type: textarea
+    id: error
+    attributes:
+      label: Raw Mermaid error
+      description: The full message shown under "Details" in the preview banner (prefilled; "Copy error" puts it on your clipboard).
+      render: text
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Plugin, IDE, OS and Mermaid.js versions (prefilled; the IDE and OS are in Help > About, the plugin version in Settings > Plugins).
+      render: text
+      placeholder: |
+        - Plugin version:
+        - IDE:
+        - OS:
+        - Mermaid.js version:

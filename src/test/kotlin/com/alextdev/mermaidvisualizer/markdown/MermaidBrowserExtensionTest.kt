@@ -1,5 +1,6 @@
 package com.alextdev.mermaidvisualizer.markdown
 
+import com.alextdev.mermaidvisualizer.MermaidWebResources
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.intellij.plugins.markdown.extensions.MarkdownBrowserPreviewExtension.Priority
 
@@ -20,15 +21,12 @@ class MermaidBrowserExtensionTest : BasePlatformTestCase() {
         }
     }
 
-    fun testScriptsContainsSixUrls() {
-        val scripts = extension.scripts
-        assertEquals(6, scripts.size)
-        assertTrue("First script URL should end with mermaid.min.js", scripts[0].endsWith("mermaid.min.js"))
-        assertTrue("Second script URL should end with mermaid-shadow-css-init.js", scripts[1].endsWith("mermaid-shadow-css-init.js"))
-        assertTrue("Third script URL should end with mermaid-config-init.js", scripts[2].endsWith("mermaid-config-init.js"))
-        assertTrue("Fourth script URL should end with mermaid-core.js", scripts[3].endsWith("mermaid-core.js"))
-        assertTrue("Fifth script URL should end with mermaid-zoom.js", scripts[4].endsWith("mermaid-zoom.js"))
-        assertTrue("Sixth script URL should end with mermaid-render.js", scripts[5].endsWith("mermaid-render.js"))
+    fun testScriptsFollowTheSharedLoadOrder() {
+        val names = extension.scripts.map { it.substringAfterLast('/') }
+        val expected = listOf(MermaidWebResources.MERMAID_JS, MermaidWebResources.SHADOW_CSS_INIT_JS, MermaidWebResources.CONFIG_INIT_JS) +
+            MermaidWebResources.MARKDOWN_SCRIPTS
+        assertEquals(expected, names)
+        assertTrue("Script URLs should be served by the preview server", extension.scripts.all { it.contains("://") })
     }
 
     fun testStylesContainsOneUrl() {

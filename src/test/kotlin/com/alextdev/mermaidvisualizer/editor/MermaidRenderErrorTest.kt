@@ -4,6 +4,7 @@ import com.alextdev.mermaidvisualizer.lang.inspection.fix.MermaidSuggestDiagramT
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -29,6 +30,67 @@ class MermaidRenderErrorTest {
         val error = MermaidRenderError("Unknown error", null, null)
         assertNull(error.line)
         assertNull(error.column)
+    }
+
+    @Test
+    fun `three-argument constructor defaults to no summary and the generic category`() {
+        val error = MermaidRenderError("Something failed", 1, 2)
+        assertNull(error.summary)
+        assertEquals(MermaidRenderErrorCategory.GENERIC, error.category)
+    }
+
+    @Test
+    fun `MermaidRenderError stores summary and category`() {
+        val error = MermaidRenderError(
+            "Parse error on line 2:", 4, 7,
+            summary = "Line 4 looks unfinished",
+            category = MermaidRenderErrorCategory.INCOMPLETE,
+        )
+        assertEquals("Line 4 looks unfinished", error.summary)
+        assertEquals(MermaidRenderErrorCategory.INCOMPLETE, error.category)
+    }
+
+    @Test
+    fun `line below 1 is rejected`() {
+        assertThrows(IllegalArgumentException::class.java) { MermaidRenderError("e", 0, null) }
+        assertThrows(IllegalArgumentException::class.java) { MermaidRenderError("e", -3, null) }
+    }
+
+    @Test
+    fun `column below 1 is rejected`() {
+        assertThrows(IllegalArgumentException::class.java) { MermaidRenderError("e", 1, 0) }
+        assertThrows(IllegalArgumentException::class.java) { MermaidRenderError("e", null, -1) }
+    }
+
+    // ── MermaidRenderErrorCategory.fromPayload ──────────────────────────
+
+    @Test
+    fun `fromPayload maps every category produced by mermaid-core js`() {
+        assertEquals(MermaidRenderErrorCategory.INCOMPLETE, MermaidRenderErrorCategory.fromPayload("incomplete"))
+        assertEquals(MermaidRenderErrorCategory.SYNTAX, MermaidRenderErrorCategory.fromPayload("syntax"))
+        assertEquals(MermaidRenderErrorCategory.UNKNOWN_DIAGRAM, MermaidRenderErrorCategory.fromPayload("unknown-diagram"))
+        assertEquals(MermaidRenderErrorCategory.LIMIT, MermaidRenderErrorCategory.fromPayload("limit"))
+        assertEquals(MermaidRenderErrorCategory.GENERIC, MermaidRenderErrorCategory.fromPayload("generic"))
+    }
+
+    @Test
+    fun `fromPayload defaults to generic for missing or unknown values`() {
+        assertEquals(MermaidRenderErrorCategory.GENERIC, MermaidRenderErrorCategory.fromPayload(null))
+        assertEquals(MermaidRenderErrorCategory.GENERIC, MermaidRenderErrorCategory.fromPayload(""))
+        assertEquals(MermaidRenderErrorCategory.GENERIC, MermaidRenderErrorCategory.fromPayload("timeout"))
+        assertEquals(MermaidRenderErrorCategory.GENERIC, MermaidRenderErrorCategory.fromPayload("SYNTAX"), "Payload values are case-sensitive")
+        assertEquals(MermaidRenderErrorCategory.GENERIC, MermaidRenderErrorCategory.fromPayload("unknown_diagram"))
+    }
+
+    @Test
+    fun `payload values round-trip and match the JS categories`() {
+        for (category in MermaidRenderErrorCategory.entries) {
+            assertEquals(category, MermaidRenderErrorCategory.fromPayload(category.payloadValue))
+        }
+        assertEquals(
+            setOf("incomplete", "syntax", "unknown-diagram", "limit", "generic"),
+            MermaidRenderErrorCategory.entries.map { it.payloadValue }.toSet(),
+        )
     }
 
     // ── SuggestDiagramTypeFix.suggestClosest ────────────────────────────

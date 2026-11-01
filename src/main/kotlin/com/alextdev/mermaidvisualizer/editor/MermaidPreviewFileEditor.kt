@@ -4,6 +4,7 @@ import com.alextdev.mermaidvisualizer.MyMessageBundle
 import com.alextdev.mermaidvisualizer.settings.MERMAID_SETTINGS_TOPIC
 import com.alextdev.mermaidvisualizer.settings.MermaidSettings
 import com.alextdev.mermaidvisualizer.settings.MermaidSettingsListener
+import com.google.gson.JsonObject
 import com.google.gson.JsonParseException
 import com.google.gson.JsonParser
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
@@ -59,6 +60,19 @@ internal class MermaidPreviewFileEditor(
     private var scrollGuardResetJob: Job? = null
     private var renderGeneration = 0L
 
+    // Render errors reach the editor only after the "Error highlight delay" setting (read at scheduling
+    // time), so that a line being typed does not flash a warning on every keystroke.
+    private val errorPublisher = RenderErrorPublisher(
+        scope = scope,
+        delayMs = { service<MermaidSettings>().state.errorSettleMs },
+        isCurrent = { generation -> generation == renderGeneration },
+        publish = { error ->
+            file.setMermaidRenderError(error)
+            restartAnalyzer()
+        },
+        clear = { clearRenderError() },
+    )
+
     init {
         if (document == null) {
             LOG.warn("Could not obtain document for file: ${file.path}. Preview will not be available.")
@@ -78,6 +92,8 @@ internal class MermaidPreviewFileEditor(
 
         document?.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
+                // The pending error describes text that no longer exists: never publish it.
+                errorPublisher.cancelPending()
                 scheduleUpdate()
             }
         }, this)
@@ -111,12 +127,17 @@ internal class MermaidPreviewFileEditor(
 
         // Clear stale render error immediately so the annotation disappears
         // as soon as a new render starts, not when it finishes
+        errorPublisher.cancelPending()
+        clearRenderError()
+
+        panel?.render(source, isDark, forceThemeRefresh, generation)
+    }
+
+    private fun clearRenderError() {
         if (file.getMermaidRenderError() != null) {
             file.setMermaidRenderError(null)
             restartAnalyzer()
         }
-
-        panel?.render(source, isDark, forceThemeRefresh, generation)
     }
 
     private fun handleRenderResult(jsonData: String) {
@@ -149,17 +170,24 @@ internal class MermaidPreviewFileEditor(
 
         val status = json.get("status")?.asString
         if (status == "ok") {
-            file.setMermaidRenderError(null)
-        } else {
-            val message = json.get("message")?.asString
-                ?: MyMessageBundle.message("render.error.unknown")
-            val line = try { json.get("line")?.takeIf { !it.isJsonNull }?.asInt?.takeIf { it >= 1 } } catch (_: Exception) { null }
-            val column = try { json.get("column")?.takeIf { !it.isJsonNull }?.asInt?.takeIf { it >= 1 } } catch (_: Exception) { null }
-            file.setMermaidRenderError(MermaidRenderError(message, line, column))
+            errorPublisher.onSuccess()
+            return
         }
-
-        restartAnalyzer()
+        val error = MermaidRenderError(
+            message = json.optionalString("message") ?: MyMessageBundle.message("render.error.unknown"),
+            line = json.optionalPositiveInt("line"),
+            column = json.optionalPositiveInt("column"),
+            summary = json.optionalString("summary")?.takeIf { it.isNotBlank() },
+            category = MermaidRenderErrorCategory.fromPayload(json.optionalString("category")),
+        )
+        errorPublisher.onError(generation, error)
     }
+
+    private fun JsonObject.optionalString(name: String): String? =
+        try { get(name)?.takeIf { it.isJsonPrimitive }?.asString } catch (_: Exception) { null }
+
+    private fun JsonObject.optionalPositiveInt(name: String): Int? =
+        try { get(name)?.takeIf { !it.isJsonNull }?.asInt?.takeIf { it >= 1 } } catch (_: Exception) { null }
 
     private fun restartAnalyzer() {
         val psiFile = PsiManager.getInstance(project).findFile(file) ?: return
@@ -229,6 +257,7 @@ internal class MermaidPreviewFileEditor(
     override fun getFile(): VirtualFile = file
 
     override fun dispose() {
+        errorPublisher.dispose()
         scope.cancel()
         file.setMermaidRenderError(null)
         LOG.debug("Disposing MermaidPreviewFileEditor for ${file.path}")

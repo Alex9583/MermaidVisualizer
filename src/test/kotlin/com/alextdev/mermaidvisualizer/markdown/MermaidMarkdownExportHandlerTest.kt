@@ -37,5 +37,8 @@ class MermaidMarkdownExportHandlerTest {
         assertEquals("mermaid/copy-png", TAG_COPY_PNG)
         assertEquals("mermaid/save", TAG_SAVE)
         assertEquals("mermaid/open-link", TAG_OPEN_LINK)
+        assertEquals("mermaid/open-in-tab", TAG_OPEN_IN_TAB)
+        assertEquals("mermaid/copy-text", TAG_COPY_TEXT)
+        assertEquals("mermaid/report-error", TAG_REPORT_ERROR)
     }
 }

@@ -30,6 +30,7 @@ IntelliJ plugin for [Mermaid](https://mermaid.js.org/) diagrams — live preview
 - Zoom (Ctrl+wheel), pan (click & drag), fit-to-window & 1:1 controls
 - **Open in new tab** — pop any diagram (Markdown preview or `.mmd` editor) into its own full-size preview tab; drag it out to a separate window if you like
 - Export diagrams as SVG or PNG — copy to clipboard or save to file
+- **Friendly render errors** — while you type, the preview keeps the last valid diagram visible under a banner that explains the error in one line (e.g. `Line 7 looks unfinished: expected ]`, with line numbers matching your source even with a YAML frontmatter or `%%` comments), shows the raw Mermaid message on demand, and offers **Copy error** and **Report on GitHub** (prefilled issue with plugin/IDE/OS/Mermaid versions; your diagram is never included)
 - Scroll synchronization between the text editor and the preview
 - Automatic dark/light theme detection and switching
 - Uses the official Mermaid.js library (v12.2.0) — supports all 34+ diagram types, including the new use case and agentflow diagrams
@@ -46,11 +47,15 @@ IntelliJ plugin for [Mermaid](https://mermaid.js.org/) diagrams — live preview
 - **Structure View** (Alt+7) — hierarchical view of diagrams, blocks, and nodes
 - **Code Folding** — fold subgraphs, loop/alt/opt/par blocks, and consecutive comments
 - **Inspections & quick-fixes** — unknown diagram types (with typo suggestions), invalid arrows per diagram context, unused node declarations
-- **Render error annotations** — Mermaid.js parsing errors surfaced directly in the editor
+- **Render error annotations** — Mermaid.js parsing errors and exceeded rendering limits surfaced directly in the `.mmd` editor, with the same one-line explanation as the preview banner. They stay calm while you type: an error is highlighted only once it has settled (**Error highlight delay**, 1 s by default, configurable in Settings > Tools > Mermaid), and an unfinished line is only a weak warning. **Alt+Enter** on the annotation offers *Copy Mermaid error* and *Report Mermaid error on GitHub…*
+
+### Welcome & What's New
+- **Welcome / What's New page** — after you install or update the plugin, the first project you open shows a preview tab, once per version: a quick tour, two live example diagrams, the settings, ways to support the project, and the release notes of every version since the one you last saw. Reopen it anytime from **Help > Mermaid Visualizer: What's New**
 
 ### Settings
-- Settings page (Settings > Tools > Mermaid) — theme (incl. the Mermaid 12 redux/neo themes), look (classic/hand-drawn/neo), layout engine (ELK/dagre), font family, max text size, live reload delay, max preview height
+- Settings page (Settings > Tools > Mermaid) — theme (incl. the Mermaid 12 redux/neo themes), look (classic/hand-drawn/neo), layout engine (ELK/dagre), font family, max text size and max edges (rendering limits, raised well above Mermaid's defaults so large generated diagrams render out of the box), live reload delay, error highlight delay, max preview height
 - **Custom rendering colors** — optionally override the visualizer background color and the line/edge color; disabled by default, so the rendering keeps following the IDE theme unless you opt in
+- **Show the welcome page after plugin updates** — on by default; turn it off to skip the What's New tab after updates (Help > Mermaid Visualizer: What's New still opens it on demand)
 
 ## Requirements
 

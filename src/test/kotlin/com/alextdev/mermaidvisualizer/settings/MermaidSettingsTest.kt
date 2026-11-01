@@ -24,8 +24,11 @@ class MermaidSettingsTest {
         assertEquals(MermaidLayout.DEFAULT, state.layout)
         assertEquals(MermaidFontFamily.DEFAULT, state.fontFamily)
         assertEquals(DEFAULT_MAX_TEXT_SIZE, state.maxTextSize)
+        assertEquals(DEFAULT_MAX_EDGES, state.maxEdges)
         assertEquals(DEFAULT_DEBOUNCE_MS, state.debounceMs)
+        assertEquals(DEFAULT_ERROR_SETTLE_MS, state.errorSettleMs)
         assertEquals(DEFAULT_MAX_HEIGHT_PERCENT, state.maxHeightPercent)
+        assertTrue(state.showWelcomePage, "Welcome page is shown after updates by default")
         assertFalse(state.overrideBackgroundColor)
         assertEquals(DEFAULT_BACKGROUND_COLOR, state.backgroundColor)
         assertFalse(state.overrideLineColor)
@@ -70,7 +73,8 @@ class MermaidSettingsTest {
         assertFalse(json.contains("\"fontFamily\""), "Default fontFamily should be omitted")
         assertFalse(json.contains("\"layout\""), "Mermaid-default layout should not emit layout field")
         assertTrue(json.contains("\"look\":\"classic\""))
-        assertTrue(json.contains("\"maxTextSize\":100000"))
+        assertTrue(json.contains("\"maxTextSize\":500000"))
+        assertTrue(json.contains("\"maxEdges\":2000"))
         assertTrue(json.contains("\"maxHeightPercent\":60"))
     }
 
@@ -193,6 +197,32 @@ class MermaidSettingsTest {
     }
 
     @Test
+    fun `default rendering limits are well above Mermaid upstream defaults`() {
+        // A generated 118k-character flowchart must render out of the box.
+        // Mermaid ships maxTextSize = 50_000 and maxEdges = 500, both in its `secure` list.
+        assertEquals(500_000, DEFAULT_MAX_TEXT_SIZE)
+        assertEquals(2_000, DEFAULT_MAX_EDGES)
+    }
+
+    @Test
+    fun `loadState clamps maxEdges below minimum`() {
+        settings.loadState(MermaidSettings.State(maxEdges = 10))
+        assertEquals(MIN_MAX_EDGES, settings.state.maxEdges)
+    }
+
+    @Test
+    fun `loadState clamps maxEdges above maximum`() {
+        settings.loadState(MermaidSettings.State(maxEdges = 5_000_000))
+        assertEquals(MAX_MAX_EDGES, settings.state.maxEdges)
+    }
+
+    @Test
+    fun `toJsConfigJson with custom maxEdges includes it`() {
+        settings.loadState(MermaidSettings.State(maxEdges = 10_000))
+        assertTrue(settings.toJsConfigJson().contains("\"maxEdges\":10000"))
+    }
+
+    @Test
     fun `loadState clamps debounceMs below minimum`() {
         settings.loadState(MermaidSettings.State(debounceMs = -100))
         assertEquals(0, settings.state.debounceMs)
@@ -202,6 +232,26 @@ class MermaidSettingsTest {
     fun `loadState clamps debounceMs above maximum`() {
         settings.loadState(MermaidSettings.State(debounceMs = 10_000))
         assertEquals(5000, settings.state.debounceMs)
+    }
+
+    @Test
+    fun `loadState clamps errorSettleMs below minimum`() {
+        settings.loadState(MermaidSettings.State(errorSettleMs = -1))
+        assertEquals(MIN_ERROR_SETTLE_MS, settings.state.errorSettleMs)
+    }
+
+    @Test
+    fun `loadState clamps errorSettleMs above maximum`() {
+        settings.loadState(MermaidSettings.State(errorSettleMs = 60_000))
+        assertEquals(MAX_ERROR_SETTLE_MS, settings.state.errorSettleMs)
+    }
+
+    @Test
+    fun `errorSettleMs and showWelcomePage are not part of the JS config`() {
+        settings.loadState(MermaidSettings.State(errorSettleMs = 1_500, showWelcomePage = false))
+        val json = settings.toJsConfigJson()
+        assertFalse(json.contains("errorSettleMs"), "Editor-side delay must not reach Mermaid: $json")
+        assertFalse(json.contains("showWelcomePage"), "Plugin UI flag must not reach Mermaid: $json")
     }
 
     @Test
@@ -236,8 +286,11 @@ class MermaidSettingsTest {
             layout = MermaidLayout.DAGRE,
             fontFamily = MermaidFontFamily.GEORGIA,
             maxTextSize = 50_000,
+            maxEdges = 3_000,
             debounceMs = 500,
+            errorSettleMs = 2_000,
             maxHeightPercent = 40,
+            showWelcomePage = false,
         )
         settings.loadState(original)
         val loaded = settings.state
@@ -246,8 +299,11 @@ class MermaidSettingsTest {
         assertEquals(MermaidLayout.DAGRE, loaded.layout)
         assertEquals(MermaidFontFamily.GEORGIA, loaded.fontFamily)
         assertEquals(50_000, loaded.maxTextSize)
+        assertEquals(3_000, loaded.maxEdges)
         assertEquals(500L, loaded.debounceMs)
+        assertEquals(2_000L, loaded.errorSettleMs)
         assertEquals(40, loaded.maxHeightPercent)
+        assertFalse(loaded.showWelcomePage)
     }
 
     @Test

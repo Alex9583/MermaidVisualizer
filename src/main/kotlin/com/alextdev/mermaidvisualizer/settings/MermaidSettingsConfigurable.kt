@@ -6,13 +6,13 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.ColorPanel
-import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.builder.selected
+import com.intellij.ui.dsl.listCellRenderer.textListCellRenderer
 import java.awt.Color
 import javax.swing.JComponent
 
@@ -23,7 +23,10 @@ internal class MermaidSettingsConfigurable : Configurable {
     private var layoutSelection: MermaidLayout? = MermaidLayout.DEFAULT
     private var fontFamilySelection: MermaidFontFamily? = MermaidFontFamily.DEFAULT
     private var maxTextSizeText: String = DEFAULT_MAX_TEXT_SIZE.toString()
+    private var maxEdgesText: String = DEFAULT_MAX_EDGES.toString()
     private var debounceMsText: String = DEFAULT_DEBOUNCE_MS.toString()
+    private var errorSettleMsText: String = DEFAULT_ERROR_SETTLE_MS.toString()
+    private var showWelcomePageSelection: Boolean = true
     private var maxHeightPercentText: String = DEFAULT_MAX_HEIGHT_PERCENT.toString()
     private var overrideBackgroundSelection: Boolean = false
     private var backgroundColorHex: String = DEFAULT_BACKGROUND_COLOR
@@ -49,41 +52,21 @@ internal class MermaidSettingsConfigurable : Configurable {
         val p = panel {
             group(MyMessageBundle.message("settings.mermaid.group.rendering")) {
                 row(MyMessageBundle.message("settings.mermaid.theme.label")) {
-                    comboBox(MermaidTheme.entries)
+                    comboBox(MermaidTheme.entries, textListCellRenderer<MermaidTheme?> { theme -> theme?.let { MyMessageBundle.message(it.displayKey) } ?: "" })
                         .bindItem(::themeSelection)
-                        .applyToComponent {
-                            renderer = SimpleListCellRenderer.create("") { theme: MermaidTheme ->
-                                MyMessageBundle.message(theme.displayKey)
-                            }
-                        }
                 }
                 row(MyMessageBundle.message("settings.mermaid.look.label")) {
-                    comboBox(MermaidLook.entries)
+                    comboBox(MermaidLook.entries, textListCellRenderer<MermaidLook?> { look -> look?.let { MyMessageBundle.message(it.displayKey) } ?: "" })
                         .bindItem(::lookSelection)
-                        .applyToComponent {
-                            renderer = SimpleListCellRenderer.create("") { look: MermaidLook ->
-                                MyMessageBundle.message(look.displayKey)
-                            }
-                        }
                 }
                 row(MyMessageBundle.message("settings.mermaid.layout.label")) {
-                    comboBox(MermaidLayout.entries)
+                    comboBox(MermaidLayout.entries, textListCellRenderer<MermaidLayout?> { layout -> layout?.let { MyMessageBundle.message(it.displayKey) } ?: "" })
                         .bindItem(::layoutSelection)
-                        .applyToComponent {
-                            renderer = SimpleListCellRenderer.create("") { layout: MermaidLayout ->
-                                MyMessageBundle.message(layout.displayKey)
-                            }
-                        }
                         .comment(MyMessageBundle.message("settings.mermaid.layout.comment"))
                 }
                 row(MyMessageBundle.message("settings.mermaid.fontFamily.label")) {
-                    comboBox(MermaidFontFamily.entries)
+                    comboBox(MermaidFontFamily.entries, textListCellRenderer<MermaidFontFamily?> { font -> font?.let { MyMessageBundle.message(it.displayKey) } ?: "" })
                         .bindItem(::fontFamilySelection)
-                        .applyToComponent {
-                            renderer = SimpleListCellRenderer.create("") { font: MermaidFontFamily ->
-                                MyMessageBundle.message(font.displayKey)
-                            }
-                        }
                 }
                 row(MyMessageBundle.message("settings.mermaid.maxTextSize.label")) {
                     textField()
@@ -100,6 +83,21 @@ internal class MermaidSettingsConfigurable : Configurable {
                         }
                         .comment(MyMessageBundle.message("settings.mermaid.maxTextSize.comment"))
                 }
+                row(MyMessageBundle.message("settings.mermaid.maxEdges.label")) {
+                    textField()
+                        .bindText(::maxEdgesText)
+                        .columns(10)
+                        .validationOnInput {
+                            val value = it.text.trim().toIntOrNull()
+                            when {
+                                value == null -> error(MyMessageBundle.message("settings.mermaid.validation.notANumber"))
+                                value !in MIN_MAX_EDGES..MAX_MAX_EDGES ->
+                                    warning(MyMessageBundle.message("settings.mermaid.maxEdges.outOfRange"))
+                                else -> null
+                            }
+                        }
+                        .comment(MyMessageBundle.message("settings.mermaid.maxEdges.comment"))
+                }
                 row(MyMessageBundle.message("settings.mermaid.debounce.label")) {
                     textField()
                         .bindText(::debounceMsText)
@@ -114,6 +112,21 @@ internal class MermaidSettingsConfigurable : Configurable {
                             }
                         }
                         .comment(MyMessageBundle.message("settings.mermaid.debounce.comment"))
+                }
+                row(MyMessageBundle.message("settings.mermaid.errorSettle.label")) {
+                    textField()
+                        .bindText(::errorSettleMsText)
+                        .columns(6)
+                        .validationOnInput {
+                            val value = it.text.trim().toLongOrNull()
+                            when {
+                                value == null -> error(MyMessageBundle.message("settings.mermaid.validation.notANumber"))
+                                value !in MIN_ERROR_SETTLE_MS..MAX_ERROR_SETTLE_MS ->
+                                    warning(MyMessageBundle.message("settings.mermaid.errorSettle.outOfRange"))
+                                else -> null
+                            }
+                        }
+                        .comment(MyMessageBundle.message("settings.mermaid.errorSettle.comment"))
                 }
                 row(MyMessageBundle.message("settings.mermaid.maxHeightPercent.label")) {
                     textField()
@@ -143,6 +156,12 @@ internal class MermaidSettingsConfigurable : Configurable {
                     cell(linePanel).enabledIf(lineCheck.selected)
                 }.rowComment(MyMessageBundle.message("settings.mermaid.lineColor.comment"))
             }
+            group(MyMessageBundle.message("settings.mermaid.group.plugin")) {
+                row {
+                    checkBox(MyMessageBundle.message("settings.mermaid.showWelcomePage.label"))
+                        .bindSelected(::showWelcomePageSelection)
+                }.rowComment(MyMessageBundle.message("settings.mermaid.showWelcomePage.comment"))
+            }
         }
         dialogPanel = p
         return p
@@ -157,7 +176,10 @@ internal class MermaidSettingsConfigurable : Configurable {
             (layoutSelection ?: MermaidLayout.DEFAULT) != state.layout ||
             (fontFamilySelection ?: MermaidFontFamily.DEFAULT) != state.fontFamily ||
             parseMaxTextSize() != state.maxTextSize ||
+            parseMaxEdges() != state.maxEdges ||
             parseDebounceMs() != state.debounceMs ||
+            parseErrorSettleMs() != state.errorSettleMs ||
+            showWelcomePageSelection != state.showWelcomePage ||
             parseMaxHeightPercent() != state.maxHeightPercent ||
             overrideBackgroundSelection != state.overrideBackgroundColor ||
             currentBackgroundHex() != state.backgroundColor ||
@@ -175,16 +197,21 @@ internal class MermaidSettingsConfigurable : Configurable {
             layout = layoutSelection ?: MermaidLayout.DEFAULT,
             fontFamily = fontFamilySelection ?: MermaidFontFamily.DEFAULT,
             maxTextSize = parseMaxTextSize(),
+            maxEdges = parseMaxEdges(),
             debounceMs = parseDebounceMs(),
+            errorSettleMs = parseErrorSettleMs(),
             maxHeightPercent = parseMaxHeightPercent(),
             overrideBackgroundColor = overrideBackgroundSelection,
             backgroundColor = currentBackgroundHex(),
             overrideLineColor = overrideLineColorSelection,
             lineColor = currentLineColorHex(),
+            showWelcomePage = showWelcomePageSelection,
         )
         settings.loadState(newState)
         maxTextSizeText = settings.state.maxTextSize.toString()
+        maxEdgesText = settings.state.maxEdges.toString()
         debounceMsText = settings.state.debounceMs.toString()
+        errorSettleMsText = settings.state.errorSettleMs.toString()
         maxHeightPercentText = settings.state.maxHeightPercent.toString()
         backgroundColorHex = settings.state.backgroundColor
         lineColorHex = settings.state.lineColor
@@ -207,7 +234,10 @@ internal class MermaidSettingsConfigurable : Configurable {
         layoutSelection = state.layout
         fontFamilySelection = state.fontFamily
         maxTextSizeText = state.maxTextSize.toString()
+        maxEdgesText = state.maxEdges.toString()
         debounceMsText = state.debounceMs.toString()
+        errorSettleMsText = state.errorSettleMs.toString()
+        showWelcomePageSelection = state.showWelcomePage
         maxHeightPercentText = state.maxHeightPercent.toString()
         overrideBackgroundSelection = state.overrideBackgroundColor
         backgroundColorHex = state.backgroundColor
@@ -238,9 +268,19 @@ internal class MermaidSettingsConfigurable : Configurable {
         return clampMaxTextSize(raw)
     }
 
+    private fun parseMaxEdges(): Int {
+        val raw = maxEdgesText.trim().toIntOrNull() ?: DEFAULT_MAX_EDGES
+        return clampMaxEdges(raw)
+    }
+
     private fun parseDebounceMs(): Long {
         val raw = debounceMsText.trim().toLongOrNull() ?: DEFAULT_DEBOUNCE_MS
         return clampDebounceMs(raw)
+    }
+
+    private fun parseErrorSettleMs(): Long {
+        val raw = errorSettleMsText.trim().toLongOrNull() ?: DEFAULT_ERROR_SETTLE_MS
+        return clampErrorSettleMs(raw)
     }
 
     private fun parseMaxHeightPercent(): Int {
