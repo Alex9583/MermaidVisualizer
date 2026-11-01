@@ -2,6 +2,10 @@
 
 All notable changes to the Mermaid Visualizer plugin will be documented in this file.
 
+## [1.14.0] - 2026-11-01
+
+- Add explained render errors with GitHub reporting, calm editor annotations, rendering limits and a Welcome / What's New page (#35)
+
 ## [1.13.1] - 2026-10-18
 
 - Update Mermaid.js to v12.2.0 with ELK class cardinality fixes and feedback-edge routing (#33)
